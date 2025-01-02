@@ -1,17 +1,37 @@
 /** @jsx MiniReact.createElement */
-const fiber = (
-    <div id="foo">
-        <h1>bar</h1>
-        {/* <input type="text"/>
-        <ul>
-            <li>1</li>
-            <li>2</li>
-            <li>3</li>
-            <li>4</li>
-        </ul>
-        <b /> */}
-    </div>
-);
+function Counter() {
+    const [state, setState] = MiniReact.useState(1);
 
+    return (
+        <div className="counter">
+            <h1>Count: {state}</h1>
+            <button
+                onClick={() => setState(state => state - 1)}
+                className="button"
+            >
+                Decrease
+            </button>
+            <button
+                onClick={() => setState(state => 0)}
+                className="button"
+            >
+                Reset
+            </button>
+            <button
+                onClick={() => setState(state => state + 1)}
+                className="button"
+            >
+                Increase
+            </button>
+            <br />
+            <input type="range" onChange={(e) => {
+                setState(+e.target.value);
+            }} />
+        </div>
+    );
+}
+
+// Create and render the app
+const element = <Counter />;
 const container = document.getElementById("root");
-MiniReact.render(fiber, container);
+MiniReact.render(element, container);
