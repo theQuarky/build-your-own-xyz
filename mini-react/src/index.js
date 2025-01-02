@@ -2,7 +2,8 @@
 const MiniReact = {
     createElement,
     render: Reconciler.render,
-    useState: HooksSystem.useState
+    useState: HooksSystem.useState,
+    useEffect: HooksSystem.useEffect
 };
 
 // For debugging
