@@ -211,6 +211,9 @@ const Reconciler = (function () {
     function commitDeletion(fiber, domParent) {
         try {
             if (fiber.dom) {
+                if (fiber.hooks) {
+                    HooksSystem.cleanupEffects(fiber);
+                }
                 domParent.removeChild(fiber.dom);
                 DOMHandler.cleanup(fiber.dom);
             } else {
@@ -273,6 +276,7 @@ const Reconciler = (function () {
         try {
             deletions.forEach(fiber => commitWork(fiber));
             commitWork(workInProgressRoot.child);
+            HooksSystem.runEffects(workInProgressRoot);
             currentRoot = workInProgressRoot;
             workInProgressRoot = null;
         } catch (error) {
