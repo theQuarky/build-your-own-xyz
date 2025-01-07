@@ -1,0 +1,4 @@
+// Complex arithmetic expressions
+let result: float = (PI * count) + (50.0 / 2.0);
+result *= 2;
+result++;
