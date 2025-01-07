@@ -1,5 +1,4 @@
 #include "lexer.h"
-#include <regex>
 #include <sstream>
 
 namespace lexer {
@@ -9,7 +8,7 @@ const std::regex Lexer::identifierPattern(R"([a-zA-Z_]\w*)");
 const std::regex Lexer::numberPattern(R"(-?\d+(\.\d+)?([eE][+-]?\d+)?)");
 const std::regex Lexer::stringPattern(R"("([^"\\]|\\.)*")");
 const std::regex Lexer::operatorPattern(
-    R"(>>>=|<<=|>>=|\+\+|--|&&|\|\||==|!=|<=|>=|\+=|-=|\*=|/=|%=|&=|\|=|\^=|<<|>>|[+\-*/%=&|^~<>!])");
+    R"(>>>=|<<=|>>=|\+\+|--|&&|\|\||==|!=|<=|>=|\+=|-=|\*=|/=|%=|&=|\|=|\^=|<<|>>|[+\-*/%=&|^~<>!(){}\[\]:;,.])");
 
 const std::unordered_map<std::string, TokenType> Lexer::keywords = {
     {"let", TokenType::LET},
@@ -28,8 +27,9 @@ const std::unordered_map<std::string, TokenType> Lexer::keywords = {
     {"false", TokenType::BOOLEAN_LITERAL}};
 
 const std::unordered_map<std::string, TokenType> Lexer::operators = {
-    {">>>", TokenType::RIGHT_SHIFT},
-    {"<<<", TokenType::LEFT_SHIFT},
+    // Multi-character operators
+    {">>", TokenType::RIGHT_SHIFT},
+    {"<<", TokenType::LEFT_SHIFT},
     {">>=", TokenType::RIGHT_SHIFT_ASSIGN},
     {"<<=", TokenType::LEFT_SHIFT_ASSIGN},
     {"++", TokenType::INCREMENT},
@@ -48,6 +48,8 @@ const std::unordered_map<std::string, TokenType> Lexer::operators = {
     {"&=", TokenType::AND_ASSIGN},
     {"|=", TokenType::OR_ASSIGN},
     {"^=", TokenType::XOR_ASSIGN},
+
+    // Single-character operators and delimiters
     {"+", TokenType::PLUS},
     {"-", TokenType::MINUS},
     {"*", TokenType::MULTIPLY},
@@ -60,7 +62,19 @@ const std::unordered_map<std::string, TokenType> Lexer::operators = {
     {"!", TokenType::NOT},
     {"<", TokenType::LESS_THAN},
     {">", TokenType::GREATER_THAN},
-    {"=", TokenType::ASSIGN}};
+    {"=", TokenType::ASSIGN},
+
+    // Delimiters
+    {"(", TokenType::LEFT_PAREN},
+    {")", TokenType::RIGHT_PAREN},
+    {"{", TokenType::LEFT_BRACE},
+    {"}", TokenType::RIGHT_BRACE},
+    {"[", TokenType::LEFT_BRACKET},
+    {"]", TokenType::RIGHT_BRACKET},
+    {":", TokenType::COLON},
+    {";", TokenType::SEMICOLON},
+    {",", TokenType::COMMA},
+    {".", TokenType::DOT}};
 
 Lexer::Lexer(const std::string &source, const std::string &fileName,
              ErrorReporter &errorReporter)
@@ -77,7 +91,7 @@ std::vector<Token> Lexer::tokenize() {
       }
     } catch (const std::exception &e) {
       reportError(e.what());
-      synchronize(); // Skip to next valid token position
+      synchronize();
     }
   }
 
@@ -89,27 +103,20 @@ void Lexer::skipWhitespace() {
   while (position_ < source_.length()) {
     char current = source_[position_];
 
-    // Handle spaces and tabs
     if (current == ' ' || current == '\t' || current == '\r') {
       position_++;
       column_++;
       continue;
     }
 
-    // Handle newlines
     if (current == '\n') {
-      // Only add semicolon if we have tokens and last token wasn't a semicolon
       if (!tokens_.empty() && tokens_.back().type != TokenType::SEMICOLON) {
-        // Check if the next non-whitespace token would make this an invalid
-        // line break
         size_t nextPos = position_ + 1;
         while (nextPos < source_.length() &&
                (source_[nextPos] == ' ' || source_[nextPos] == '\t')) {
           nextPos++;
         }
 
-        // If we've hit the end or found another newline, this newline can be a
-        // semicolon
         if (nextPos >= source_.length() || source_[nextPos] == '\n' ||
             source_[nextPos] == '}' || source_[nextPos] == ';') {
           tokens_.emplace_back(TokenType::SEMICOLON, ";", line_, column_);
@@ -121,60 +128,48 @@ void Lexer::skipWhitespace() {
       continue;
     }
 
-    // Handle single-line comments
-    if (current == '/' && position_ + 1 < source_.length() &&
-        source_[position_ + 1] == '/') {
-      position_ += 2;
-      while (position_ < source_.length() && source_[position_] != '\n') {
-        position_++;
-      }
-      continue;
-    }
-
-    // Handle multi-line comments
-    if (current == '/' && position_ + 1 < source_.length() &&
-        source_[position_ + 1] == '*') {
-      position_ += 2;
-      while (position_ + 1 < source_.length() &&
-             !(source_[position_] == '*' && source_[position_ + 1] == '/')) {
-        if (source_[position_] == '\n') {
-          line_++;
-          column_ = 1;
-        } else {
-          column_++;
+    if (current == '/' && position_ + 1 < source_.length()) {
+      if (source_[position_ + 1] == '/') {
+        position_ += 2;
+        while (position_ < source_.length() && source_[position_] != '\n') {
+          position_++;
         }
-        position_++;
+        continue;
       }
-      if (position_ + 1 < source_.length()) {
-        position_ += 2; // Skip closing */
+      if (source_[position_ + 1] == '*') {
+        position_ += 2;
+        while (position_ + 1 < source_.length() &&
+               !(source_[position_] == '*' && source_[position_ + 1] == '/')) {
+          if (source_[position_] == '\n') {
+            line_++;
+            column_ = 1;
+          } else {
+            column_++;
+          }
+          position_++;
+        }
+        if (position_ + 1 < source_.length()) {
+          position_ += 2;
+        }
+        continue;
       }
-      continue;
     }
 
     break;
   }
 }
 
-bool Lexer::isStatementStart(TokenType type) const {
-  return type == TokenType::LET || type == TokenType::CONST ||
-         type == TokenType::FUNCTION || type == TokenType::RETURN ||
-         type == TokenType::IF || type == TokenType::FOR ||
-         type == TokenType::WHILE;
-}
-
 void Lexer::scanToken() {
   std::string remaining = source_.substr(position_);
   std::smatch match;
 
-  // Try matching string literals
   if (std::regex_search(remaining, match, stringPattern,
                         std::regex_constants::match_continuous)) {
     std::string str = match.str();
-    // Process escape sequences
     std::string processed;
-    for (size_t i = 1; i < str.length() - 1;
-         ++i) { // Skip opening and closing quotes
-      if (str[i] == '\\') {
+
+    for (size_t i = 1; i < str.length() - 1; ++i) {
+      if (str[i] == '\\' && i + 1 < str.length() - 1) {
         i++;
         switch (str[i]) {
         case 'n':
@@ -193,45 +188,20 @@ void Lexer::scanToken() {
           processed += '"';
           break;
         default:
-          reportError("Invalid escape sequence");
+          reportError("Invalid escape sequence: \\" + std::string(1, str[i]));
           return;
         }
       } else {
         processed += str[i];
       }
     }
+
     addToken(TokenType::STRING_LITERAL, processed);
     position_ += str.length();
     column_ += str.length();
     return;
   }
 
-  // Try matching numbers
-  if (std::regex_search(remaining, match, numberPattern,
-                        std::regex_constants::match_continuous)) {
-    std::string number = match.str();
-    addToken(TokenType::NUMBER_LITERAL, number);
-    position_ += number.length();
-    column_ += number.length();
-    return;
-  }
-
-  // Try matching identifiers or keywords
-  if (std::regex_search(remaining, match, identifierPattern,
-                        std::regex_constants::match_continuous)) {
-    std::string identifier = match.str();
-    auto it = keywords.find(identifier);
-    if (it != keywords.end()) {
-      addToken(it->second, identifier);
-    } else {
-      addToken(TokenType::IDENTIFIER, identifier);
-    }
-    position_ += identifier.length();
-    column_ += identifier.length();
-    return;
-  }
-
-  // Try matching operators
   if (std::regex_search(remaining, match, operatorPattern,
                         std::regex_constants::match_continuous)) {
     std::string op = match.str();
@@ -246,57 +216,45 @@ void Lexer::scanToken() {
     return;
   }
 
-  // Handle single-character tokens
+  if (std::regex_search(remaining, match, numberPattern,
+                        std::regex_constants::match_continuous)) {
+    std::string number = match.str();
+    addToken(TokenType::NUMBER_LITERAL, number);
+    position_ += number.length();
+    column_ += number.length();
+    return;
+  }
+
+  if (std::regex_search(remaining, match, identifierPattern,
+                        std::regex_constants::match_continuous)) {
+    std::string identifier = match.str();
+    auto it = keywords.find(identifier);
+    if (it != keywords.end()) {
+      addToken(it->second, identifier);
+    } else {
+      addToken(TokenType::IDENTIFIER, identifier);
+    }
+    position_ += identifier.length();
+    column_ += identifier.length();
+    return;
+  }
+
   char c = source_[position_];
-  switch (c) {
-  case '(':
-    addToken(TokenType::LEFT_PAREN, "(");
-    break;
-  case ')':
-    addToken(TokenType::RIGHT_PAREN, ")");
-    break;
-  case '{':
-    addToken(TokenType::LEFT_BRACE, "{");
-    break;
-  case '}':
-    addToken(TokenType::RIGHT_BRACE, "}");
-    break;
-  case '[':
-    addToken(TokenType::LEFT_BRACKET, "[");
-    break;
-  case ']':
-    addToken(TokenType::RIGHT_BRACKET, "]");
-    break;
-  case ':':
-    addToken(TokenType::COLON, ":");
-    break;
-  case ';':
-    addToken(TokenType::SEMICOLON, ";");
-    break;
-  case ',':
-    addToken(TokenType::COMMA, ",");
-    break;
-  case '.':
-    addToken(TokenType::DOT, ".");
-    break;
-  default: {
+  if (!std::isspace(c)) {
     std::stringstream ss;
     ss << "Unexpected character: '" << c << "'";
     reportError(ss.str());
-  }
   }
   position_++;
   column_++;
 }
 
 void Lexer::addToken(TokenType type, const std::string &lexeme) {
-  // Check for multiple statements on the same line
   if (isStatementStart(type)) {
     if (statementStarted_ && line_ == lastStatementLine_ &&
         (tokens_.empty() || tokens_.back().type != TokenType::SEMICOLON)) {
-      std::string msg =
-          "Multiple statements on one line require explicit semicolons";
-      reportError(msg);
+      reportError(
+          "Multiple statements on one line require explicit semicolons");
       synchronize();
       return;
     }
@@ -304,7 +262,6 @@ void Lexer::addToken(TokenType type, const std::string &lexeme) {
     lastStatementLine_ = line_;
   }
 
-  // Reset statement tracking after semicolon
   if (type == TokenType::SEMICOLON) {
     statementStarted_ = false;
   }
@@ -318,7 +275,6 @@ void Lexer::reportError(const std::string &message) {
 }
 
 void Lexer::synchronize() {
-  // Skip until we find a semicolon or newline
   while (!isAtEnd()) {
     char c = source_[position_];
     if (c == ';' || c == '\n') {
@@ -337,5 +293,12 @@ void Lexer::synchronize() {
 }
 
 bool Lexer::isAtEnd() const { return position_ >= source_.length(); }
+
+bool Lexer::isStatementStart(TokenType type) const {
+  return type == TokenType::LET || type == TokenType::CONST ||
+         type == TokenType::FUNCTION || type == TokenType::RETURN ||
+         type == TokenType::IF || type == TokenType::FOR ||
+         type == TokenType::WHILE;
+}
 
 } // namespace lexer
