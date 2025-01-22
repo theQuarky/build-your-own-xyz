@@ -1,42 +1,45 @@
-# src/CMakeLists.txt
-
-# Collect source files
-set(CORE_SOURCES
-    core/error_reporter.cpp
-    core/utils.cpp
+add_library(core
+    core/diagnostics/error_reporter.cpp
+    core/utils/file_utils.cpp
+    core/utils/log_utils.cpp
+    core/utils/string_utils.cpp
 )
 
-set(LEXER_SOURCES
+add_library(tokens
+    tokens/stream/token_stream.cpp
+)
+
+add_library(lexer
     lexer/lexer.cpp
-    lexer/token.cpp
+    lexer/scanner/base/scanner_base.cpp
+    lexer/scanner/specialized/identifier_scanner.cpp
+    lexer/scanner/specialized/number_scanner.cpp
+    lexer/scanner/specialized/operator_scanner.cpp
+    lexer/scanner/specialized/string_scanner.cpp
+    lexer/scanner/token_scanner.cpp
+    lexer/state/lexer_state.cpp
 )
 
-set(PARSER_SOURCES
-    parser/parser.cpp
+add_library(repl
+    repl/repl.cpp
 )
 
-# Create the compiler executable
-add_executable(tspp-compiler
-    main.cpp
-    ${CORE_SOURCES}
-    ${LEXER_SOURCES}
-    ${PARSER_SOURCES}
-)
+target_link_libraries(core PUBLIC tokens)
+target_link_libraries(tokens PUBLIC core)
+target_link_libraries(lexer PUBLIC core tokens)
+target_link_libraries(repl PUBLIC core tokens lexer)
 
-# Add include directories
-target_include_directories(tspp-compiler 
-    PRIVATE 
-        ${CMAKE_CURRENT_SOURCE_DIR}
-)
+target_include_directories(core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(tokens PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(lexer PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(repl PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
-# Set compiler flags
-if(MSVC)
-    target_compile_options(tspp-compiler PRIVATE /W4)
-else()
-    target_compile_options(tspp-compiler PRIVATE -Wall -Wextra -Wpedantic)
-endif()
+add_executable(tspp main.cpp)
 
-# Install rules
-install(TARGETS tspp-compiler
-    RUNTIME DESTINATION bin
+target_link_libraries(tspp
+    PRIVATE
+        core
+        tokens
+        lexer
+        repl
 )
