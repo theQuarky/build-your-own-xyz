@@ -4,10 +4,10 @@
 
 ### 1. Lexer Enhancements
 - [x] Basic token system
-- [ ] Add attribute token support (#)
+- [x] Add attribute token support (#)
 - [ ] Add pointer token support (@)
-- [ ] Enhanced number literal support
-- [ ] Update token patterns for new syntax
+- [x] Enhanced number literal support
+- [x] Update token patterns for new syntax
 
 ### 2. Parser Improvements
 - [x] Basic AST structure
