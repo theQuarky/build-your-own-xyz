@@ -1,22 +1,21 @@
-# Root CMakeLists.txt
-cmake_minimum_required(VERSION 3.10)
-project(tspp-compiler VERSION 1.0.0 LANGUAGES CXX)
+cmake_minimum_required(VERSION 3.14)
+project(tspp VERSION 0.1.0)
 
-# Specify C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Set output directories
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+# Compiler flags
+if(MSVC)
+    add_compile_options(/W4)
+else()
+    add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
+
+# Enable debug symbols
+set(CMAKE_BUILD_TYPE Debug)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address -fno-omit-frame-pointer")
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -fsanitize=address")
 
 # Add source directory
 add_subdirectory(src)
-
-# Create a target to copy example files to build directory
-# file(GLOB EXAMPLE_FILES "examples/*.xyz")
-# foreach(EXAMPLE_FILE ${EXAMPLE_FILES})
-#     file(COPY ${EXAMPLE_FILE} DESTINATION ${CMAKE_BINARY_DIR}/bin/examples)
-# endforeach()

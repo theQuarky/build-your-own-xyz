@@ -1,0 +1,4 @@
+// Testing interface and class
+interface Shape {
+    area(): float;
+}
