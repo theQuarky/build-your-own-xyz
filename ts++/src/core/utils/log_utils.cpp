@@ -8,6 +8,8 @@ namespace {
 std::string getTokenCategory(tokens::TokenType type) {
   if (tokens::isDeclaration(type))
     return "Declaration";
+  if (tokens::isAssignmentOperator(type))
+    return "Assignment";
   if (tokens::isType(type))
     return "Type";
   if (tokens::isControlFlow(type))
@@ -44,6 +46,19 @@ const std::unordered_map<tokens::TokenType, std::string> tokenTypeStrings = {
     {tokens::TokenType::TYPEDEF, "TYPEDEF"},
     {tokens::TokenType::NAMESPACE, "NAMESPACE"},
     {tokens::TokenType::TEMPLATE, "TEMPLATE"},
+    {tokens::TokenType::NEW, "NEW"},
+    {tokens::TokenType::THROW, "THROW"},
+    {tokens::TokenType::TYPEOF, "TYPEOF"},
+
+    // Class related
+    {tokens::TokenType::EXTENDS, "EXTENDS"},
+    {tokens::TokenType::IMPLEMENTS, "IMPLEMENTS"},
+    {tokens::TokenType::THROWS, "THROWS"},
+
+    // Access Modifiers
+    {tokens::TokenType::PUBLIC, "PUBLIC"},
+    {tokens::TokenType::PRIVATE, "PRIVATE"},
+    {tokens::TokenType::PROTECTED, "PROTECTED"},
 
     // Memory Management
     {tokens::TokenType::STACK, "STACK"},
@@ -52,6 +67,7 @@ const std::unordered_map<tokens::TokenType, std::string> tokenTypeStrings = {
     {tokens::TokenType::SHARED, "SHARED"},
     {tokens::TokenType::UNIQUE, "UNIQUE"},
     {tokens::TokenType::WEAK, "WEAK"},
+    {tokens::TokenType::AT, "ADDRESS_OF"},
 
     // Types
     {tokens::TokenType::VOID, "VOID"},
@@ -73,6 +89,9 @@ const std::unordered_map<tokens::TokenType, std::string> tokenTypeStrings = {
     {tokens::TokenType::TRY, "TRY"},
     {tokens::TokenType::CATCH, "CATCH"},
     {tokens::TokenType::FINALLY, "FINALLY"},
+    {tokens::TokenType::SWITCH, "SWITCH"},
+    {tokens::TokenType::CASE, "CASE"},
+    {tokens::TokenType::DEFAULT, "DEFAULT"},
 
     // Operators
     {tokens::TokenType::PLUS, "PLUS"},
@@ -80,7 +99,6 @@ const std::unordered_map<tokens::TokenType, std::string> tokenTypeStrings = {
     {tokens::TokenType::STAR, "STAR"},
     {tokens::TokenType::SLASH, "SLASH"},
     {tokens::TokenType::PERCENT, "PERCENT"},
-    {tokens::TokenType::EQUALS, "EQUALS"},
     {tokens::TokenType::EQUALS_EQUALS, "EQUALS_EQUALS"},
     {tokens::TokenType::EXCLAIM_EQUALS, "EXCLAIM_EQUALS"},
     {tokens::TokenType::LESS, "LESS"},
@@ -95,20 +113,16 @@ const std::unordered_map<tokens::TokenType, std::string> tokenTypeStrings = {
     {tokens::TokenType::AMPERSAND_AMPERSAND, "AMPERSAND_AMPERSAND"},
     {tokens::TokenType::PIPE_PIPE, "PIPE_PIPE"},
 
-    // compound assignments
-    {
-        tokens::TokenType::PLUS_EQUALS,
-        "+=",
-    },
-    {tokens::TokenType::MINUS_EQUALS, "-="},
-    {tokens::TokenType::STAR_EQUALS, "*="},
-    {tokens::TokenType::SLASH_EQUALS, "/="},
-    {tokens::TokenType::PERCENT_EQUALS, "%="},
-    {tokens::TokenType::AMPERSAND_EQUALS, "&="},
-    {tokens::TokenType::PIPE_EQUALS, "|="},
-    {tokens::TokenType::CARET_EQUALS, "^="},
-    {tokens::TokenType::PLUS_PLUS, "++"},
-    {tokens::TokenType::MINUS_MINUS, "--"},
+    // Assignment Operators
+    {tokens::TokenType::EQUALS, "EQUALS"},
+    {tokens::TokenType::PLUS_EQUALS, "PLUS_EQUALS"},
+    {tokens::TokenType::MINUS_EQUALS, "MINUS_EQUALS"},
+    {tokens::TokenType::STAR_EQUALS, "STAR_EQUALS"},
+    {tokens::TokenType::SLASH_EQUALS, "SLASH_EQUALS"},
+    {tokens::TokenType::PERCENT_EQUALS, "PERCENT_EQUALS"},
+    {tokens::TokenType::AMPERSAND_EQUALS, "AMPERSAND_EQUALS"},
+    {tokens::TokenType::PIPE_EQUALS, "PIPE_EQUALS"},
+    {tokens::TokenType::CARET_EQUALS, "CARET_EQUALS"},
 
     // Literals
     {tokens::TokenType::IDENTIFIER, "IDENTIFIER"},
