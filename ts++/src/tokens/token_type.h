@@ -20,7 +20,8 @@ enum class TokenType {
   TYPEDEF,          // 'typedef' keyword for type aliases
   NAMESPACE,        // 'namespace' keyword for namespace declarations
   TEMPLATE,         // 'template' keyword for template declarations
-  DECL_END = TEMPLATE,
+  NEW,              // 'new' keyword to create new class instance
+  DECL_END = NEW,
 
   /*****************************************************************************
    * Generic and Template Related

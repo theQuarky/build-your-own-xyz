@@ -45,7 +45,22 @@ getKeywordMapImpl() {
                   {"int", tokens::TokenType::INT},
                   {"float", tokens::TokenType::FLOAT},
                   {"boolean", tokens::TokenType::BOOLEAN},
-                  {"string", tokens::TokenType::STRING}};
+                  {"string", tokens::TokenType::STRING},
+                  {"try", tokens::TokenType::TRY},
+                  {"catch", tokens::TokenType::CATCH},
+                  {"switch", tokens::TokenType::SWITCH},
+                  {"case", tokens::TokenType::CASE},
+                  {"default", tokens::TokenType::DEFAULT},
+                  {"extends", tokens::TokenType::EXTENDS},
+                  {"implements", tokens::TokenType::IMPLEMENTS},
+                  {"public", tokens::TokenType::PUBLIC},
+                  {"private", tokens::TokenType::PRIVATE},
+                  {"protected", tokens::TokenType::PROTECTED},
+                  {"new", tokens::TokenType::NEW},
+                  {"throw", tokens::TokenType::THROW},
+                  {"typeof", tokens::TokenType::TYPEOF}
+
+      };
   return keywords;
 }
 } // namespace
@@ -86,24 +101,25 @@ tokens::Token IdentifierScanner::scan() {
 }
 
 tokens::Token IdentifierScanner::scanAttribute() {
-    size_t start = state_->getPosition();
-    advance(); // Skip #
+  size_t start = state_->getPosition();
+  advance(); // Skip #
 
-    // Scan attribute name
-    while (!isAtEnd() && (std::isalnum(peek()) || peek() == '_')) {
-        advance();
-    }
+  // Scan attribute name
+  while (!isAtEnd() && (std::isalnum(peek()) || peek() == '_')) {
+    advance();
+  }
 
-    // Create string directly instead of string_view
-    const std::string& source = state_->getSource();
-    std::string fullAttr = source.substr(start, state_->getPosition() - start);
+  // Create string directly instead of string_view
+  const std::string &source = state_->getSource();
+  std::string fullAttr = source.substr(start, state_->getPosition() - start);
 
-    // Check if it's a valid attribute name
-    if (!lexer::LexerPatterns::isValidAttribute(fullAttr)) {
-        return makeErrorToken("Unknown attribute");
-    }
+  // Check if it's a valid attribute name
+  if (!lexer::LexerPatterns::isValidAttribute(fullAttr)) {
+    return makeErrorToken("Unknown attribute");
+  }
 
-    return makeToken(tokens::TokenType::ATTRIBUTE, start, state_->getPosition() - start);
+  return makeToken(tokens::TokenType::ATTRIBUTE, start,
+                   state_->getPosition() - start);
 }
 
 /*****************************************************************************
