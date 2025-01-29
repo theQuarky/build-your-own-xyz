@@ -21,7 +21,8 @@ const std::unordered_map<std::string_view, tokens::TokenType> operatorMap = {
     {"*", tokens::TokenType::STAR},
     {"/", tokens::TokenType::SLASH},
     {"%", tokens::TokenType::PERCENT},
-
+    {"?", tokens::TokenType::QUESTION},
+    
     // Braces and parentheses
     {"{", tokens::TokenType::LEFT_BRACE},
     {"}", tokens::TokenType::RIGHT_BRACE},
@@ -35,6 +36,8 @@ const std::unordered_map<std::string_view, tokens::TokenType> operatorMap = {
     {"|", tokens::TokenType::PIPE},
     {"^", tokens::TokenType::CARET},
     {"~", tokens::TokenType::TILDE},
+    {">>", tokens::TokenType::RIGHT_SHIFT},
+    {"<<", tokens::TokenType::LEFT_SHIFT},
 
     // Logical operators
     {"!", tokens::TokenType::EXCLAIM},
@@ -68,7 +71,11 @@ const std::unordered_map<std::string_view, tokens::TokenType> operatorMap = {
     {"@", tokens::TokenType::AT},
 
     // type assign operator
-    {":", tokens::TokenType::COLON}};
+    {":", tokens::TokenType::COLON},
+
+    // end of the line
+    {";", tokens::TokenType::SEMICOLON}};
+
 } // namespace
 
 /*****************************************************************************

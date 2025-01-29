@@ -103,7 +103,7 @@ public:
   /**
    * @brief Check if reached end of source
    */
-  bool isAtEnd() const { return position_ >= source_.length(); }
+  bool isAtEnd() const { return position_ > source_.length(); }
 
   /**
    * @brief Check if any tokens collected

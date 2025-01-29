@@ -1,30 +1,10 @@
 #pragma once
+#include "core/common/common_types.h"
 #include "token_type.h"
 #include <optional>
 #include <string>
 
 namespace tokens {
-
-/**
- * Class for tracking token positions in source code
- */
-class TokenLocation {
-public:
-  // Constructor with default values
-  TokenLocation(unsigned int ln = 0, unsigned int col = 0,
-                std::string file = "")
-      : line(ln), column(col), filename(std::move(file)) {}
-
-  // Accessors for position information
-  unsigned int getLine() const { return line; }
-  unsigned int getColumn() const { return column; }
-  const std::string &getFilename() const { return filename; }
-
-private:
-  unsigned int line;    // Line number (1-based)
-  unsigned int column;  // Column number (1-based)
-  std::string filename; // Source file name
-};
 
 /**
  * Class representing a token with type, lexeme, and location information
@@ -34,14 +14,14 @@ public:
   /**
    * Regular token constructor
    */
-  Token(TokenType type, std::string lexeme, TokenLocation location)
+  Token(TokenType type, std::string lexeme, core::SourceLocation location)
       : type_(type), lexeme_(std::move(lexeme)),
         location_(std::move(location)) {}
 
   /**
    * Factory method for creating error tokens
    */
-  static Token createError(std::string lexeme, TokenLocation location,
+  static Token createError(std::string lexeme, core::SourceLocation location,
                            std::string errorMessage) {
     Token token(TokenType::ERROR_TOKEN, std::move(lexeme), std::move(location));
     token.errorMessage_ = std::move(errorMessage);
@@ -53,7 +33,7 @@ public:
    */
   TokenType getType() const { return type_; }
   const std::string &getLexeme() const { return lexeme_; }
-  const TokenLocation &getLocation() const { return location_; }
+  const core::SourceLocation &getLocation() const { return location_; }
   const std::optional<std::string> &getErrorMessage() const {
     return errorMessage_;
   }
@@ -77,7 +57,7 @@ public:
 private:
   TokenType type_;                          // Type of token
   std::string lexeme_;                      // Actual text of token
-  TokenLocation location_;                  // Position in source
+  core::SourceLocation location_;                 // Position in source
   std::optional<std::string> errorMessage_; // Error information if any
 };
 

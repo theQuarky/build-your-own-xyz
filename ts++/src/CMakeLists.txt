@@ -20,6 +20,13 @@ add_library(lexer
     lexer/state/lexer_state.cpp
 )
 
+add_library(parser
+    parser/parser.cpp
+    parser/visitors/parse_visitor/base_parse_visitor.cpp
+    parser/visitors/parse_visitor/expression_parse_visitor.cpp
+    parser/visitors/parse_visitor/declaration_parse_visitor.cpp
+)
+
 add_library(repl
     repl/repl.cpp
 )
@@ -27,11 +34,13 @@ add_library(repl
 target_link_libraries(core PUBLIC tokens)
 target_link_libraries(tokens PUBLIC core)
 target_link_libraries(lexer PUBLIC core tokens)
-target_link_libraries(repl PUBLIC core tokens lexer)
+target_link_libraries(parser PUBLIC core tokens)
+target_link_libraries(repl PUBLIC core tokens lexer parser)
 
 target_include_directories(core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories(tokens PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories(lexer PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(parser PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_include_directories(repl PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_executable(tspp main.cpp)
@@ -41,5 +50,6 @@ target_link_libraries(tspp
         core
         tokens
         lexer
+        parser
         repl
 )

@@ -5,6 +5,7 @@
  *****************************************************************************/
 
 #include "token_stream.h"
+#include "core/common/common_types.h"
 
 namespace tokens {
 
@@ -15,7 +16,8 @@ TokenStream::TokenStream(std::vector<Token> tokens)
     : tokens_(std::move(tokens)), current_(0) {
   // Safety: Ensure stream always ends with EOF token
   if (tokens_.empty() || tokens_.back().getType() != TokenType::END_OF_FILE) {
-    tokens_.push_back(Token(TokenType::END_OF_FILE, "", TokenLocation(0, 0)));
+    tokens_.push_back(
+        Token(TokenType::END_OF_FILE, "", core::SourceLocation(0, 0)));
   }
 }
 

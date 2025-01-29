@@ -10,8 +10,6 @@
 #include "lexer/patterns/lexer_patterns.h"
 #include "tokens/token_type.h"
 #include "tokens/tokens.h"
-#include <iostream>
-#include <ostream>
 
 namespace lexer {
 
