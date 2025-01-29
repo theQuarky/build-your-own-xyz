@@ -147,10 +147,12 @@ enum class TokenType {
   PERCENT,               // '%'
 
   // Bitwise
-  AMPERSAND, // '&'
-  PIPE,      // '|'
-  CARET,     // '^'
-  TILDE,     // '~'
+  AMPERSAND,   // '&'
+  PIPE,        // '|'
+  CARET,       // '^'
+  TILDE,       // '~'
+  RIGHT_SHIFT, // >>
+  LEFT_SHIFT,  // <<
 
   // Logical
   EXCLAIM,             // '!'

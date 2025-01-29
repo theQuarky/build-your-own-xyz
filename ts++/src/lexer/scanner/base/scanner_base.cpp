@@ -79,14 +79,14 @@ tokens::Token ScannerBase::makeToken(tokens::TokenType type, size_t start,
 
   std::string_view lexeme = source.substr(start, length);
 
-  tokens::TokenLocation location(state_->getLine(), state_->getColumn(),
+  core::SourceLocation location(state_->getLine(), state_->getColumn(),
                                  state_->getFileName());
 
   return tokens::Token(type, std::string(lexeme), location);
 }
 
 tokens::Token ScannerBase::makeErrorToken(const std::string &message) {
-  tokens::TokenLocation location(state_->getLine(), state_->getColumn(),
+  core::SourceLocation location(state_->getLine(), state_->getColumn(),
                                  state_->getFileName());
 
   auto lexeme = state_->getCurrentLexeme();

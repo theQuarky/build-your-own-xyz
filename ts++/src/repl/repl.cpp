@@ -1,6 +1,7 @@
 #include "repl.h"
 #include "../core/utils/log_utils.h"
 #include "../lexer/lexer.h"
+#include "../parser/parser.h"
 #include <iostream>
 
 namespace repl {
@@ -22,35 +23,35 @@ void Repl::processLine(const std::string &line) {
 
     // Lexical analysis
     lexer::Lexer lexer(line, "<repl>");
-    auto tokenStream = lexer.tokenize();
+    auto tokens = lexer.tokenize();
 
-    if (tokenStream.empty()) {
+    if (tokens.empty()) {
       return;
     }
 
     // Print tokens if enabled
     if (showTokens_) {
-      printTokenStream(tokenStream);
+      printTokenStream(tokens);
       std::cout << "\n";
     }
 
     // Parsing
-    // parser::Parser parser(std::move(tokenStream), errorReporter_);
-    // auto ast = parser.parse();
+    parser::Parser parser(std::move(tokens), errorReporter_);
+    if (!parser.parse()) {
+      if (errorReporter_.hasErrors()) {
+        errorReporter_.printAllErrors();
+      }
+      return;
+    }
 
-    // if (errorReporter_.hasErrors()) {
-    //   errorReporter_.printAllErrors();
-    //   return;
-    // }
-
-    // // Print AST if enabled
-    // if (showAst_) {
-    //   parser::ASTPrinterVisitor printer;
-    //   for (const auto &declaration : ast) {
-    //     declaration->accept(printer);
-    //   }
-    //   std::cout << printer.getOutput() << "\n";
-    // }
+    // Print AST if enabled
+    if (showAst_) {
+      const auto &ast = parser.getAST();
+      // TODO: Add AST printer visitor
+      // parser::ASTPrinterVisitor printer;
+      // printer.print(ast);
+      // std::cout << printer.getOutput() << "\n";
+    }
 
   } catch (const std::exception &e) {
     std::cerr << "Error: " << e.what() << "\n";

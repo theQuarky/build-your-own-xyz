@@ -2,6 +2,7 @@
 #include "core/utils/file_utils.h"
 #include "core/utils/log_utils.h"
 #include "lexer/lexer.h"
+#include "parser/parser.h"
 #include "repl/repl.h"
 #include <iostream>
 
@@ -35,16 +36,28 @@ int main(int argc, char *argv[]) {
 
     // Lexical analysis
     lexer::Lexer lexer(*sourceCode, filePath);
-    auto tokenStream = lexer.tokenize();
+    auto tokens = lexer.tokenize();
 
-    if (tokenStream.empty()) {
+    if (tokens.empty()) {
       std::cerr << "Fatal errors occurred during lexical analysis.\n";
       return 1;
     }
 
     // Print tokens if you want to see the lexer output
-    printTokenStream(tokenStream);
+    printTokenStream(tokens);
 
+    // Parsing
+    parser::Parser parser(std::move(tokens), errorReporter);
+    if (!parser.parse()) {
+      std::cerr << "Fatal errors occurred during parsing.\n";
+      errorReporter.printAllErrors();
+      return 1;
+    }
+
+    // Get AST for next phase
+    const auto &ast = parser.getAST();
+    // TODO: Next phases (type checking, optimization, code generation)
+    printAST(ast);
     return 0;
 
   } catch (const std::exception &e) {

@@ -1,10 +1,21 @@
 #include "log_utils.h"
 #include "tokens/token_type.h"
+#include "parser/nodes/declaration_nodes.h"
+#include "parser/nodes/expression_nodes.h"
+#include "parser/nodes/type_nodes.h"
 #include <iomanip>
 #include <iostream>
 #include <unordered_map>
 
 namespace {
+const char *RESET = "\033[0m";
+const char *RED = "\033[31m";
+const char *GREEN = "\033[32m";
+const char *YELLOW = "\033[33m";
+const char *BLUE = "\033[34m";
+const char *MAGENTA = "\033[35m";
+const char *CYAN = "\033[36m";
+
 std::string getTokenCategory(tokens::TokenType type) {
   if (tokens::isDeclaration(type))
     return "Declaration";
@@ -112,6 +123,8 @@ const std::unordered_map<tokens::TokenType, std::string> tokenTypeStrings = {
     {tokens::TokenType::EXCLAIM, "EXCLAIM"},
     {tokens::TokenType::AMPERSAND_AMPERSAND, "AMPERSAND_AMPERSAND"},
     {tokens::TokenType::PIPE_PIPE, "PIPE_PIPE"},
+    {tokens::TokenType::RIGHT_SHIFT, "RIGHT_SHIFT"},
+    {tokens::TokenType::LEFT_SHIFT, "LEFT_SHIFT"},
 
     // Assignment Operators
     {tokens::TokenType::EQUALS, "EQUALS"},
@@ -151,6 +164,7 @@ const std::unordered_map<tokens::TokenType, std::string> tokenTypeStrings = {
     // Special
     {tokens::TokenType::ERROR_TOKEN, "ERROR"},
     {tokens::TokenType::END_OF_FILE, "EOF"}};
+
 } // anonymous namespace
 
 void printToken(const tokens::Token &token) {
@@ -185,4 +199,117 @@ void printTokenStream(const std::vector<tokens::Token> &tokens) {
 
   std::cout << std::string(80, '-') << "\n"
             << "Total tokens: " << tokens.size() << "\n";
+}
+
+void printIndent(int level) {
+  for (int i = 0; i < level; ++i) {
+    std::cout << "  ";
+  }
+}
+
+std::string getNodeColor(const nodes::NodePtr &node) {
+  if (std::dynamic_pointer_cast<nodes::DeclarationNode>(node))
+    return GREEN;
+  if (std::dynamic_pointer_cast<nodes::ExpressionNode>(node))
+    return YELLOW;
+  if (std::dynamic_pointer_cast<nodes::TypeNode>(node))
+    return BLUE;
+  return RESET;
+}
+
+std::string getTypeString(tokens::TokenType type) {
+  auto it = tokenTypeStrings.find(type);
+  return it != tokenTypeStrings.end() ? it->second : "UNKNOWN";
+}
+
+void printLocation(const core::SourceLocation &loc) {
+  std::cout << "(" << loc.getLine() << ":" << loc.getColumn() << ")";
+}
+
+void printASTNode(const nodes::NodePtr &node, int indent) {
+  if (!node) {
+    printIndent(indent);
+    std::cout << RED << "nullptr" << RESET << "\n";
+    return;
+  }
+
+  printIndent(indent);
+  std::cout << getNodeColor(node);
+
+  // Print based on node type
+  if (auto varDecl = std::dynamic_pointer_cast<nodes::VarDeclNode>(node)) {
+    std::cout << "VarDecl '" << varDecl->getName() << "' ";
+    printLocation(varDecl->getLocation());
+    std::cout << (varDecl->isConst() ? " const" : "");
+    std::cout << "\n";
+
+    printIndent(indent + 1);
+    std::cout << BLUE << "Type: ";
+    if (varDecl->getType()) {
+      if (auto primType = std::dynamic_pointer_cast<nodes::PrimitiveTypeNode>(
+              varDecl->getType())) {
+        std::cout << getTypeString(primType->getType());
+      } else {
+        std::cout << "complex_type";
+      }
+    } else {
+      std::cout << "inferred";
+    }
+    std::cout << RESET << "\n";
+
+    if (varDecl->getInitializer()) {
+      printIndent(indent + 1);
+      std::cout << YELLOW << "Init:" << RESET << "\n";
+      printASTNode(varDecl->getInitializer(), indent + 2);
+    }
+  } else if (auto literal =
+                 std::dynamic_pointer_cast<nodes::LiteralExpressionNode>(
+                     node)) {
+    std::cout << "Literal '" << literal->getValue() << "' ";
+    printLocation(literal->getLocation());
+    std::cout << "\n";
+  } else if (auto binary =
+                 std::dynamic_pointer_cast<nodes::BinaryExpressionNode>(node)) {
+    std::cout << "BinaryExpr (" << getTypeString(binary->getExpressionType())
+              << ") ";
+    printLocation(binary->getLocation());
+    std::cout << "\n";
+    printASTNode(binary->getLeft(), indent + 1);
+    printASTNode(binary->getRight(), indent + 1);
+  } else if (auto unary =
+                 std::dynamic_pointer_cast<nodes::UnaryExpressionNode>(node)) {
+    std::cout << "UnaryExpr (" << getTypeString(unary->getExpressionType())
+              << ") ";
+    std::cout << (unary->isPrefix() ? "prefix" : "postfix") << " ";
+    printLocation(unary->getLocation());
+    std::cout << "\n";
+    printASTNode(unary->getOperand(), indent + 1);
+  } else if (auto ident =
+                 std::dynamic_pointer_cast<nodes::IdentifierExpressionNode>(
+                     node)) {
+    std::cout << "Identifier '" << ident->getName() << "' ";
+    printLocation(ident->getLocation());
+    std::cout << "\n";
+  } else {
+    std::cout << "Unknown Node Type ";
+    printLocation(node->getLocation());
+    std::cout << "\n";
+  }
+
+  std::cout << RESET;
+}
+
+void printAST(const parser::AST &ast) {
+  std::cout << "\nAbstract Syntax Tree:\n" << std::string(80, '-') << "\n";
+
+  const auto &nodes = ast.getNodes();
+  if (nodes.empty()) {
+    std::cout << RED << "Empty AST" << RESET << "\n";
+  } else {
+    for (const auto &node : nodes) {
+      printASTNode(node);
+    }
+  }
+
+  std::cout << std::string(80, '-') << "\n";
 }

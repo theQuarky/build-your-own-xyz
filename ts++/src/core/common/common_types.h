@@ -27,65 +27,78 @@ using String = std::string;
 /*****************************************************************************
  * Source Location & Error Display
  *****************************************************************************/
-struct SourceLocation {
-  // ANSI color codes for error highlighting
-  const String RED = "\033[1;31m";
-  const String RESET = "\033[0m";
+class SourceLocation {
+public:
+  // Constants for error highlighting
+  static constexpr const char *RED = "\033[1;31m";
+  static constexpr const char *RESET = "\033[0m";
 
-  String filename;
-  Int line;
-  Int column;
-  String line_content;
-
-  SourceLocation() : line(0), column(0) {}
-
-  SourceLocation(const String &file, Int l, Int c)
-      : filename(file), line(l), column(c) {
+  // Constructors matching TokenLocation interface
+  SourceLocation(unsigned int ln = 0, unsigned int col = 0,
+                 std::string file = "")
+      : line_(ln), column_(col), filename_(std::move(file)) {
     loadLineContent();
   }
 
-  // Comparison operator for location checks
-  Bool operator==(const SourceLocation &other) const {
-    return filename == other.filename && line == other.line &&
-           column == other.column;
+  // TokenLocation compatible interface
+  unsigned int getLine() const { return line_; }
+  unsigned int getColumn() const { return column_; }
+  const std::string &getFilename() const { return filename_; }
+
+  // Extended functionality
+  const std::string &getLineContent() const { return line_content_; }
+
+  // Comparison operator
+  bool operator==(const SourceLocation &other) const {
+    return filename_ == other.filename_ && line_ == other.line_ &&
+           column_ == other.column_;
   }
+
+  // Format location for error display
+  std::string toString() const {
+    std::stringstream output;
+    // File location
+    output << filename_ << ":" << line_ << ":" << column_ << "\n";
+
+    // Show line content with error pointer if available
+    if (!line_content_.empty()) {
+      output << line_content_ << "\n";
+      std::string pointer_line(column_ - 1, ' ');
+      output << pointer_line << RED << "^" << RESET;
+    }
+
+    return output.str();
+  }
+
+  // Reload line content (useful if file changes)
+  void reloadContent() { loadLineContent(); }
+
+private:
+  unsigned int line_;        // Line number (1-based)
+  unsigned int column_;      // Column number (1-based)
+  std::string filename_;     // Source file name
+  std::string line_content_; // Content of the error line
 
   // Load the source line for error display
   void loadLineContent() {
-    std::ifstream file(filename);
+    std::ifstream file(filename_);
     if (!file.is_open()) {
-      line_content = "";
+      line_content_ = "";
       return;
     }
 
-    String current_line;
-    Int current_line_num = 1;
+    std::string current_line;
+    unsigned int current_line_num = 1;
 
     while (std::getline(file, current_line)) {
-      if (current_line_num == line) {
-        line_content = current_line;
+      if (current_line_num == line_) {
+        line_content_ = current_line;
         break;
       }
       current_line_num++;
     }
 
     file.close();
-  }
-
-  // Format location for error display
-  String toString() const {
-    std::stringstream output;
-    // File location
-    output << filename << ":" << line << ":" << column << "\n";
-
-    // Show line content with error pointer if available
-    if (!line_content.empty()) {
-      output << line_content << "\n";
-      String pointer_line(column - 1, ' ');
-      output << pointer_line << RED << "^" << RESET;
-    }
-
-    return output.str();
   }
 };
 

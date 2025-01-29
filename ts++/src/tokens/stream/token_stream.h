@@ -99,7 +99,6 @@ public:
    */
   void setPosition(size_t position);
 
-private:
   /**
    * @brief Check if current token matches type without consuming
    * @param type TokenType to check against
@@ -107,6 +106,7 @@ private:
    */
   bool check(TokenType type) const;
 
+private:
   std::vector<Token> tokens_; ///< Storage for token sequence
   size_t current_;            ///< Current position in token stream
 };
