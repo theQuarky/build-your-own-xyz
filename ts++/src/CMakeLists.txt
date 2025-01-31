@@ -22,9 +22,10 @@ add_library(lexer
 
 add_library(parser
     parser/parser.cpp
-    parser/visitors/parse_visitor/base_parse_visitor.cpp
-    parser/visitors/parse_visitor/expression_parse_visitor.cpp
-    parser/visitors/parse_visitor/declaration_parse_visitor.cpp
+    parser/visitors/parse_visitor/base/base_parse_visitor.cpp
+    parser/visitors/parse_visitor/expression/expression_parse_visitor.cpp
+    parser/visitors/parse_visitor/declaration/declaration_parse_visitor.cpp
+    parser/visitors/parse_visitor/statement/statement_parse_visitor.cpp
 )
 
 add_library(repl

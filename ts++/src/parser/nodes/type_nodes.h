@@ -31,6 +31,8 @@ public:
   virtual bool isArray() const { return false; }
   virtual bool isFunction() const { return false; }
   virtual bool isTemplate() const { return false; }
+
+  virtual std::string toString() const = 0;
 };
 
 using TypePtr = std::shared_ptr<TypeNode>;
@@ -49,6 +51,22 @@ public:
   bool accept(interface::BaseInterface *visitor) override {
     return visitor->visitParse();
   };
+  std::string toString() const override {
+    switch (type_) {
+    case tokens::TokenType::VOID:
+      return "void";
+    case tokens::TokenType::INT:
+      return "int";
+    case tokens::TokenType::FLOAT:
+      return "float";
+    case tokens::TokenType::BOOLEAN:
+      return "boolean";
+    case tokens::TokenType::STRING:
+      return "string";
+    default:
+      return "unknown";
+    }
+  }
 
 private:
   tokens::TokenType type_; // VOID, INT, FLOAT, etc.
@@ -66,6 +84,7 @@ public:
   bool accept(interface::BaseInterface *visitor) override {
     return visitor->visitParse();
   };
+  std::string toString() const override { return name_; }
 
 private:
   std::string name_;
@@ -84,6 +103,18 @@ public:
   bool accept(interface::BaseInterface *visitor) override {
     return visitor->visitParse();
   };
+  std::string toString() const override {
+    if (qualifiers_.empty()) {
+      return "";
+    }
+
+    std::string result = qualifiers_[0];
+    for (size_t i = 1; i < qualifiers_.size(); i++) {
+      result += '.';
+      result += qualifiers_[i];
+    }
+    return result;
+  }
 
 private:
   std::vector<std::string> qualifiers_;
@@ -105,6 +136,9 @@ public:
   bool accept(interface::BaseInterface *visitor) override {
     return visitor->visitParse();
   };
+  std::string toString() const override {
+    return elementType_->toString() + "[]";
+  }
 
 private:
   TypePtr elementType_; // Type of array elements
@@ -135,6 +169,24 @@ public:
   bool accept(interface::BaseInterface *visitor) override {
     return visitor->visitParse();
   };
+  std::string toString() const override {
+    std::ostringstream oss;
+    oss << baseType_->toString() << "@";
+    switch (kind_) {
+    case PointerKind::Raw:
+      break;
+    case PointerKind::Safe:
+      oss << "safe";
+      break;
+    case PointerKind::Unsafe:
+      oss << "unsafe";
+      break;
+    case PointerKind::Aligned:
+      oss << "aligned(" << alignment_ << ")";
+      break;
+    }
+    return oss.str();
+  }
 
 private:
   TypePtr baseType_;        // Type being pointed to

@@ -8,7 +8,6 @@
 #include "parser/ast.h"
 #include "parser/visitors/base_visitor.h"
 #include "tokens/stream/token_stream.h"
-#include <memory>
 
 namespace parser {
 
@@ -28,9 +27,9 @@ public:
   }
 
 private:
-  tokens::TokenStream tokens_;                     // Token stream being parsed
-  core::ErrorReporter &errorReporter_;             // Error reporting
-  AST ast_;                                        // AST being built
+  tokens::TokenStream tokens_;                // Token stream being parsed
+  core::ErrorReporter &errorReporter_;        // Error reporting 
+  AST ast_;                                   // AST being built
   std::unique_ptr<visitors::BaseVisitor> visitor_; // Main visitor for parsing
 };
 

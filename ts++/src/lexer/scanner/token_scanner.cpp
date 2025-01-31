@@ -3,7 +3,7 @@
  * Description: Implementation of main token scanner for TSPP lexical analysis
  *****************************************************************************/
 #include "token_scanner.h"
-#include <iostream>
+#include "core/common/common_types.h"
 
 namespace lexer {
 
@@ -79,7 +79,7 @@ void TokenScanner::skipWhitespace() {
 
 bool TokenScanner::checkComment() {
   if (state_->getCurrentChar() == '/') {
-    if (state_->peekNext() == '/') {
+    if (state_->peekNext(1) == '/') {
       skipLineComment();
       return true;
     }

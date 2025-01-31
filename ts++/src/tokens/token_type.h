@@ -41,7 +41,8 @@ enum class TokenType {
   SHARED,                // '#shared' smart pointer type
   UNIQUE,                // '#unique' smart pointer type
   WEAK,                  // '#weak' smart pointer type
-  STORAGE_END = WEAK,
+  ATTRIBUTE,             // '#'
+  STORAGE_END = ATTRIBUTE,
 
   /*****************************************************************************
    * Access Modifiers
@@ -202,8 +203,7 @@ enum class TokenType {
   RIGHT_BRACKET,                // ']'
   SEMICOLON,                    // ';'
   COMMA,                        // ','
-  ATTRIBUTE,                    // '#'
-  DELIMITER_END = ATTRIBUTE,
+  DELIMITER_END = COMMA,
 
   /*****************************************************************************
    * Additional Token Types for Enhanced Language Features

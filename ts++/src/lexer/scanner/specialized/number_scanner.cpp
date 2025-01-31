@@ -9,6 +9,7 @@
 #include "number_scanner.h"
 #include "lexer/patterns/lexer_patterns.h"
 #include <cctype>
+#include <iostream>
 
 namespace lexer {
 
