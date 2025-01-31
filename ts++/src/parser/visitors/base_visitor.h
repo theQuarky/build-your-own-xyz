@@ -1,23 +1,16 @@
-/*****************************************************************************
- * File: base_visitor.h
- * Description: Main visitor interface that coordinates all visitor types
- *****************************************************************************/
-
+// base_visitor.h
 #pragma once
 #include "core/diagnostics/error_reporter.h"
 #include "parser/ast.h"
-#include "parser/visitors/parse_visitor/base_parse_visitor.h"
+#include "parser/visitors/parse_visitor/base/base_parse_visitor.h"
 #include "tokens/stream/token_stream.h"
 #include <memory>
 
 namespace visitors {
 
 /**
- * @brief Main visitor interface that coordinates different visitor types
- *
- * This class acts as a facade for different visitor implementations,
- * providing a clean interface for the parser to use without needing
- * to know about specific visitor details.
+ * Main visitor interface that coordinates different visitor types.
+ * Acts as a facade for different visitor implementations.
  */
 class BaseVisitor {
 public:
@@ -32,37 +25,26 @@ public:
   BaseVisitor &operator=(const BaseVisitor &) = delete;
   BaseVisitor(BaseVisitor &&) = default;
   BaseVisitor &operator=(BaseVisitor &&) = default;
-  void addNode(nodes::NodePtr node) { ast_.addNode(std::move(node)); };
-const parser::AST &getAST() {
-    const auto &nodes = parseVisitor_->getNodes();
-    for (const auto &node : nodes) {
-      ast_.addNode(node); // Build AST from stored nodes
-    }
-    return ast_;
-  };
   ~BaseVisitor() = default;
 
-  /**
-   * @brief Entry point for parsing phase
-   * @return Success status of parsing
-   */
+  // Entry point for parsing phase
   bool parse() { return parseVisitor_->visitParse(); }
 
-  // Future visitor method stubs
-  // bool typeCheck();
-  // bool optimize();
-  // bool generateCode();
+  // AST management
+  void addNode(nodes::NodePtr node) { ast_.addNode(std::move(node)); }
+  const parser::AST &getAST() {
+    const auto &nodes = parseVisitor_->getNodes();
+    for (const auto &node : nodes) {
+      ast_.addNode(node);
+    }
+    return ast_;
+  }
 
 private:
   tokens::TokenStream &tokens_;
   core::ErrorReporter &errorReporter_;
   parser::AST ast_;
-  // Different visitor implementations
   std::unique_ptr<BaseParseVisitor> parseVisitor_;
-  // Future visitors:
-  // std::unique_ptr<TypeCheckVisitor> typeCheckVisitor_;
-  // std::unique_ptr<OptimizationVisitor> optimizationVisitor_;
-  // std::unique_ptr<CodeGenVisitor> codeGenVisitor_;
 };
 
 } // namespace visitors

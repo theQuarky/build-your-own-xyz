@@ -6,6 +6,8 @@
 #include "operator_scanner.h"
 #include "lexer/patterns/lexer_patterns.h"
 #include "tokens/token_type.h"
+#include <iostream>
+#include <string_view>
 #include <unordered_map>
 
 namespace lexer {
@@ -91,7 +93,6 @@ tokens::Token OperatorScanner::scan() {
   size_t start = state_->getPosition();
   char firstChar = peek();
   advance();
-
   // Try compound operator first (+=, -=, ++, etc)
   if (isCompoundOperator(firstChar)) {
     char nextChar = peek();

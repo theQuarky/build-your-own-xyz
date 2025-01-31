@@ -42,7 +42,7 @@ getKeywordMapImpl() {
                   {"void", tokens::TokenType::VOID},
                   {"int", tokens::TokenType::INT},
                   {"float", tokens::TokenType::FLOAT},
-                  {"boolean", tokens::TokenType::BOOLEAN},
+                  {"bool", tokens::TokenType::BOOLEAN},
                   {"string", tokens::TokenType::STRING},
                   {"try", tokens::TokenType::TRY},
                   {"catch", tokens::TokenType::CATCH},

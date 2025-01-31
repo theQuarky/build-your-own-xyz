@@ -39,7 +39,7 @@ Type           → PrimaryType
                 | FunctionType
                 | SmartPointerType
 
-PrimaryType    → "void" | "int" | "float" | "boolean" | "string" 
+PrimaryType    → "void" | "int" | "float" | "bool" | "string" 
                 | QualifiedName
 
 UnionType      → Type "|" Type
