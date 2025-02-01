@@ -1,5 +1,7 @@
 // base_parse_visitor.cpp
 #include "base_parse_visitor.h"
+#include <iostream>
+#include <iterator>
 
 namespace visitors {
 
@@ -22,6 +24,7 @@ bool BaseParseVisitor::visitParse() {
           tokens_.check(tokens::TokenType::CONST) ||
           tokens_.check(tokens::TokenType::FUNCTION) ||
           tokens_.check(tokens::TokenType::CLASS)) {
+        std::cout << tokens_.peek().getLexeme() << std::endl;
         auto declNode = parseDeclaration();
         if (!declNode) {
           hadError = true;

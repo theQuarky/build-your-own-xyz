@@ -206,6 +206,7 @@ public:
   bool accept(interface::BaseInterface *visitor) override {
     return visitor->visitParse();
   };
+  std::string toString() const override { return baseType_->toString() + "&"; }
 
 private:
   TypePtr baseType_;
@@ -251,6 +252,18 @@ public:
   bool accept(interface::BaseInterface *visitor) override {
     return visitor->visitParse();
   };
+  std::string toString() const override {
+    std::ostringstream oss;
+    oss << baseType_->toString() << "<";
+    for (size_t i = 0; i < arguments_.size(); ++i) {
+      oss << arguments_[i]->toString();
+      if (i != arguments_.size() - 1) {
+        oss << ", ";
+      }
+    }
+    oss << ">";
+    return oss.str();
+  }
 
 private:
   TypePtr baseType_;               // Template type being instantiated
@@ -273,10 +286,50 @@ public:
   bool accept(interface::BaseInterface *visitor) override {
     return visitor->visitParse();
   };
+  std::string toString() const override {
+    std::string kindStr;
+    switch (kind_) {
+    case SmartPointerKind::Shared:
+      kindStr = "#shared";
+      break;
+    case SmartPointerKind::Unique:
+      kindStr = "#unique";
+      break;
+    case SmartPointerKind::Weak:
+      kindStr = "#weak";
+      break;
+    }
+    return kindStr + "<" + pointeeType_->toString() + ">";
+  }
 
 private:
   TypePtr pointeeType_;
   SmartPointerKind kind_;
+};
+
+/**
+ * unioun type node (int | float | string)
+ */
+class UnionTypeNode : public TypeNode {
+public:
+  UnionTypeNode(TypePtr left, TypePtr right, const core::SourceLocation &loc)
+      : TypeNode(loc), left_(std::move(left)), right_(std::move(right)) {}
+
+  TypePtr getLeft() const { return left_; }
+  TypePtr getRight() const { return right_; }
+
+  bool accept(interface::BaseInterface *visitor) override {
+    return visitor->visitParse();
+  }
+
+  // Provide an implementation for the pure virtual function.
+  std::string toString() const override {
+    return left_->toString() + " | " + right_->toString();
+  }
+
+private:
+  TypePtr left_;
+  TypePtr right_;
 };
 
 // Forward declarations for type visitors

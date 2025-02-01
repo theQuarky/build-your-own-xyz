@@ -10,6 +10,7 @@
 #include "lexer/patterns/lexer_patterns.h"
 #include "tokens/token_type.h"
 #include "tokens/tokens.h"
+#include <iostream>
 
 namespace lexer {
 
@@ -110,7 +111,6 @@ tokens::Token IdentifierScanner::scanAttribute() {
   // Create string directly instead of string_view
   const std::string &source = state_->getSource();
   std::string fullAttr = source.substr(start, state_->getPosition() - start);
-
   // Check if it's a valid attribute name
   if (!lexer::LexerPatterns::isValidAttribute(fullAttr)) {
     return makeErrorToken("Unknown attribute");
