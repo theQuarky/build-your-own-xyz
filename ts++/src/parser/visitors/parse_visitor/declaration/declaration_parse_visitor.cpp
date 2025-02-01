@@ -1,4 +1,6 @@
 #include "declaration_parse_visitor.h"
+#include "parser/nodes/declaration_nodes.h"
+#include <iostream>
 
 namespace visitors {
 
@@ -24,12 +26,15 @@ DeclarationParseVisitor::DeclarationParseVisitor(
 
 nodes::DeclPtr DeclarationParseVisitor::parseDeclaration() {
   try {
+
     // Parse attributes first
     auto attributes = parseAttributeList();
 
     // Parse storage class
     tokens::TokenType storageClass = tokens::TokenType::ERROR_TOKEN;
-    if (tokens_.check(tokens::TokenType::ATTRIBUTE)) {
+    auto nextLexeme = tokens_.peek().getLexeme();
+    if (nextLexeme == "#stack" || nextLexeme == "#heap" ||
+        nextLexeme == "#static") {
       storageClass = parseStorageClass();
       if (storageClass == tokens::TokenType::ERROR_TOKEN) {
         return nullptr;
@@ -66,15 +71,72 @@ nodes::DeclPtr DeclarationParseVisitor::parseDeclaration() {
 }
 
 nodes::TypePtr DeclarationParseVisitor::parseType() {
-  auto baseType = parsePrimaryType();
-  if (!baseType)
+  // First, parse a primary type.
+  auto left = parsePrimaryType();
+  if (!left)
     return nullptr;
-  return parseTypeModifiers(baseType);
+
+  // Now, check for union operator(s) by looking at the token lexeme.
+  while (!tokens_.isAtEnd() && tokens_.peek().getLexeme() == "|") {
+    // Consume the '|' token.
+    tokens_.advance();
+
+    // Parse the type after '|'
+    auto right = parsePrimaryType();
+    if (!right) {
+      error("Expected type after '|'");
+      return nullptr;
+    }
+    // Build a union type node combining left and right.
+    left = std::make_shared<nodes::UnionTypeNode>(left, right,
+                                                  left->getLocation());
+  }
+
+  // Finally, apply any type modifiers (like arrays or pointers) to the entire
+  // union type.
+  return parseTypeModifiers(left);
 }
 
 nodes::TypePtr DeclarationParseVisitor::parsePrimaryType() {
   auto location = tokens_.peek().getLocation();
+  if (!tokens_.isAtEnd()) {
+    std::string lex = tokens_.peek().getLexeme();
+    if (lex == "#shared" || lex == "#unique" || lex == "#weak") {
+      // Consume the smart pointer token.
+      auto spToken = tokens_.peek();
+      tokens_.advance();
+      // Expect a '<' after the smart pointer keyword.
+      if (!match(tokens::TokenType::LESS)) {
+        error("Expected '<' after " + lex);
+        return nullptr;
+      }
+      // Parse the pointee type.
+      auto pointee = parseType();
+      if (!pointee)
+        return nullptr;
+      // Expect a '>' after the type.
+      if (!match(tokens::TokenType::GREATER)) {
+        error("Expected '>' after smart pointer type");
+        return nullptr;
+      }
+      // Determine the smart pointer kind.
+      nodes::SmartPointerTypeNode::SmartPointerKind kind;
+      if (lex == "#shared")
+        kind = nodes::SmartPointerTypeNode::SmartPointerKind::Shared;
+      else if (lex == "#unique")
+        kind = nodes::SmartPointerTypeNode::SmartPointerKind::Unique;
+      else if (lex == "#weak")
+        kind = nodes::SmartPointerTypeNode::SmartPointerKind::Weak;
+      else {
+        error("Unknown smart pointer type: " + lex);
+        return nullptr;
+      }
+      return std::make_shared<nodes::SmartPointerTypeNode>(pointee, kind,
+                                                           location);
+    }
+  }
 
+  // Branch for primitive type
   if (matchAny({tokens::TokenType::VOID, tokens::TokenType::INT,
                 tokens::TokenType::FLOAT, tokens::TokenType::BOOLEAN,
                 tokens::TokenType::STRING})) {
@@ -85,7 +147,37 @@ nodes::TypePtr DeclarationParseVisitor::parsePrimaryType() {
   if (match(tokens::TokenType::IDENTIFIER)) {
     auto name = tokens_.previous().getLexeme();
     std::vector<std::string> qualifiers = {name};
+    auto baseType =
+        std::make_shared<nodes::NamedTypeNode>(std::move(name), location);
+    if (match(tokens::TokenType::LESS)) { // Expect '<'
+      std::vector<nodes::TypePtr> arguments;
 
+      // Parse the first type argument.
+      auto arg = parseType();
+      if (!arg) {
+        error("Expected type in template parameter list");
+        return nullptr;
+      }
+      arguments.push_back(arg);
+
+      // Parse additional type arguments separated by commas.
+      while (match(tokens::TokenType::COMMA)) {
+        arg = parseType();
+        if (!arg) {
+          error("Expected type in template parameter list");
+          return nullptr;
+        }
+        arguments.push_back(arg);
+      }
+
+      if (!match(tokens::TokenType::GREATER)) { // Expect '>'
+        error("Expected '>' after template parameter list");
+        return nullptr;
+      }
+
+      return std::make_shared<nodes::TemplateTypeNode>(baseType, arguments,
+                                                       location);
+    }
     while (match(tokens::TokenType::DOT)) {
       if (!match(tokens::TokenType::IDENTIFIER)) {
         error("Expected identifier after '.'");
@@ -156,6 +248,10 @@ DeclarationParseVisitor::parseTypeModifiers(nodes::TypePtr baseType) {
 
       baseType = std::make_shared<nodes::PointerTypeNode>(baseType, kind,
                                                           alignExpr, location);
+    } else if (match(tokens::TokenType::AMPERSAND)) { // Make sure AMPERSAND is
+                                                      // defined in your token
+                                                      // enum.
+      baseType = std::make_shared<nodes::ReferenceTypeNode>(baseType, location);
     } else {
       break;
     }
@@ -190,38 +286,51 @@ tokens::TokenType DeclarationParseVisitor::parseStorageClass() {
 std::vector<nodes::AttributePtr> DeclarationParseVisitor::parseAttributeList() {
   std::vector<nodes::AttributePtr> attributes;
 
-  while (match(tokens::TokenType::ATTRIBUTE)) {
+  // Loop while the next token is an attribute token but not a storage class
+  // token.
+  while (check(tokens::TokenType::ATTRIBUTE)) {
+    // Peek at the token lexeme
+    std::string lexeme = tokens_.peek().getLexeme();
+    // If it's a storage class token, break out of the loop
+    if (lexeme == "#stack" || lexeme == "#heap" || lexeme == "#static") {
+      break;
+    }
+    // Otherwise, consume the ATTRIBUTE token and parse the attribute.
+    match(tokens::TokenType::ATTRIBUTE);
     if (auto attr = parseAttribute()) {
       attributes.push_back(attr);
     }
   }
-
   return attributes;
 }
 
 nodes::AttributePtr DeclarationParseVisitor::parseAttribute() {
-  auto location = tokens_.previous().getLocation();
+  auto location =
+      tokens_.previous().getLocation(); // location of the attribute token
 
-  if (!match(tokens::TokenType::IDENTIFIER)) {
-    error("Expected attribute name");
+  // Get the attribute token's lexeme (e.g., "#inline" or "#optimize")
+  std::string lex = tokens_.previous().getLexeme();
+  // If the lexeme starts with '#' remove it.
+  if (!lex.empty() && lex[0] == '#') {
+    lex = lex.substr(1);
+  } else {
+    error("Expected attribute prefix '#'");
     return nullptr;
   }
 
-  auto name = tokens_.previous().getLexeme();
+  // For attributes that have an argument, check for '('.
   nodes::ExpressionPtr argument;
-
   if (match(tokens::TokenType::LEFT_PAREN)) {
     argument = exprVisitor_.parseExpression();
     if (!argument)
       return nullptr;
-
     if (!match(tokens::TokenType::RIGHT_PAREN)) {
       error("Expected ')' after attribute argument");
       return nullptr;
     }
   }
 
-  return std::make_shared<nodes::AttributeNode>(name, argument, location);
+  return std::make_shared<nodes::AttributeNode>(lex, argument, location);
 }
 
 bool DeclarationParseVisitor::match(tokens::TokenType type) {

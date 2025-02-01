@@ -49,8 +49,8 @@ int main(int argc, char *argv[]) {
     // Parsing
     parser::Parser parser(std::move(tokens), errorReporter);
     if (!parser.parse()) {
-      std::cerr << "Fatal errors occurred during parsing.\n";
-      errorReporter.printAllErrors();
+      // std::cerr << "Fatal errors occurred during parsing.\n";
+      // errorReporter.printAllErrors();
       return 1;
     }
 

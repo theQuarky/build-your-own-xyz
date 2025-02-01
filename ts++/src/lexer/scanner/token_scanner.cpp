@@ -83,7 +83,7 @@ bool TokenScanner::checkComment() {
       skipLineComment();
       return true;
     }
-    if (state_->peekNext() == '*') {
+    if (state_->peekNext(1) == '*') {
       skipBlockComment();
       return true;
     }
@@ -102,7 +102,7 @@ void TokenScanner::skipBlockComment() {
   state_->advance(); // Skip *
 
   while (!state_->isAtEnd()) {
-    if (state_->getCurrentChar() == '*' && state_->peekNext() == '/') {
+    if (state_->getCurrentChar() == '*' && state_->peekNext(1) == '/') {
       state_->advance(); // Skip *
       state_->advance(); // Skip /
       return;

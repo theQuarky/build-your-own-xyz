@@ -26,7 +26,32 @@ private:
            std::to_string(loc.getColumn()) + ")";
   }
 
-  // Node type visitors
+  static std::string tokenTypeToString(tokens::TokenType type) {
+    switch (type) {
+    case tokens::TokenType::PLUS:
+      return "+";
+    case tokens::TokenType::MINUS:
+      return "-";
+    case tokens::TokenType::STAR:
+      return "*";
+    case tokens::TokenType::SLASH:
+      return "/";
+    case tokens::TokenType::INT:
+      return "INT";
+    case tokens::TokenType::FLOAT:
+      return "FLOAT";
+    case tokens::TokenType::BOOLEAN:
+      return "BOOLEAN";
+    case tokens::TokenType::STRING:
+      return "STRING";
+    case tokens::TokenType::VOID:
+      return "VOID";
+    // ... add other cases as needed
+    default:
+      return std::to_string(static_cast<int>(type));
+    }
+  }
+
   void visitVarDecl(const nodes::VarDeclNode *node) {
     indent();
     std::cout << GREEN << "VarDecl '" << node->getName() << "' "
@@ -51,10 +76,30 @@ private:
       std::cout << " const";
     std::cout << RESET << "\n";
 
+    // Print attributes if any
+    const auto &attributes = node->getAttributes();
+    if (!attributes.empty()) {
+      indentLevel_++;
+      indent();
+      std::cout << YELLOW << "Attributes:" << RESET << "\n";
+      for (const auto &attr : attributes) {
+        indentLevel_++;
+        indent();
+        std::cout << YELLOW << attr->getName();
+        if (attr->getArgument()) {
+          std::cout << " (";
+          visitExpr(attr->getArgument().get());
+          std::cout << ")";
+        }
+        std::cout << RESET << "\n";
+        indentLevel_--;
+      }
+      indentLevel_--;
+    }
+
     // Print type
     if (node->getType()) {
       indentLevel_++;
-      indent();
       visitType(node->getType().get());
       indentLevel_--;
     }
@@ -90,18 +135,97 @@ private:
       indent();
       std::cout << YELLOW << "Identifier '" << ident->getName() << "' "
                 << getLocationString(ident->getLocation()) << RESET << "\n";
+    } else {
+      indent();
+      // Use tokenTypeToString() to convert the expression's type to a string.
+      std::cout << YELLOW
+                << "Expr: " << tokenTypeToString(expr->getExpressionType())
+                << " " << getLocationString(expr->getLocation()) << RESET
+                << "\n";
     }
     indentLevel_--;
   }
 
   void visitType(const nodes::TypeNode *type) {
-    std::cout << BLUE << "Type: ";
-    if (auto primType = dynamic_cast<const nodes::PrimitiveTypeNode *>(type)) {
-      std::cout << getTypeString(primType->getType());
-    } else {
-      std::cout << "complex_type";
+    indent();
+    std::cout << BLUE << "Type: " << type->toString() << RESET << "\n";
+
+    // Optionally print additional details for composite types.
+    if (auto arrType = dynamic_cast<const nodes::ArrayTypeNode *>(type)) {
+      indentLevel_++;
+      indent();
+      std::cout << BLUE
+                << "Element Type: " << arrType->getElementType()->toString()
+                << RESET << "\n";
+      if (arrType->getSize()) {
+        indent();
+        std::cout << BLUE << "Array Size Expression: ";
+        // Optionally call visitExpr for more details.
+        std::cout << RESET << "\n";
+      }
+      indentLevel_--;
+    } else if (auto ptrType =
+                   dynamic_cast<const nodes::PointerTypeNode *>(type)) {
+      indentLevel_++;
+      indent();
+      std::cout << BLUE << "Base Type: " << ptrType->getBaseType()->toString()
+                << RESET << "\n";
+      indentLevel_--;
+    } else if (auto refType =
+                   dynamic_cast<const nodes::ReferenceTypeNode *>(type)) {
+      indentLevel_++;
+      indent();
+      std::cout << BLUE
+                << "Referenced Type: " << refType->getBaseType()->toString()
+                << RESET << "\n";
+      indentLevel_--;
+    } else if (auto funcType =
+                   dynamic_cast<const nodes::FunctionTypeNode *>(type)) {
+      indentLevel_++;
+      indent();
+      std::cout << BLUE
+                << "Return Type: " << funcType->getReturnType()->toString()
+                << RESET << "\n";
+      indent();
+      std::cout << BLUE << "Parameter Types: ";
+      for (const auto &param : funcType->getParameterTypes()) {
+        std::cout << param->toString() << " ";
+      }
+      std::cout << RESET << "\n";
+      indentLevel_--;
+    } else if (auto tmplType =
+                   dynamic_cast<const nodes::TemplateTypeNode *>(type)) {
+      indentLevel_++;
+      indent();
+      std::cout << BLUE
+                << "Base Template: " << tmplType->getBaseType()->toString()
+                << RESET << "\n";
+      indent();
+      std::cout << BLUE << "Template Arguments: ";
+      for (const auto &arg : tmplType->getArguments()) {
+        std::cout << arg->toString() << " ";
+      }
+      std::cout << RESET << "\n";
+      indentLevel_--;
+    } else if (auto spType =
+                   dynamic_cast<const nodes::SmartPointerTypeNode *>(type)) {
+      indentLevel_++;
+      indent();
+      std::cout << BLUE
+                << "Pointee Type: " << spType->getPointeeType()->toString()
+                << RESET << "\n";
+      indentLevel_--;
+    } else if (auto unionType =
+                   dynamic_cast<const nodes::UnionTypeNode *>(type)) {
+      indentLevel_++;
+      indent();
+      std::cout << BLUE << "Left Type: " << unionType->getLeft()->toString()
+                << RESET << "\n";
+      indent();
+      std::cout << BLUE << "Right Type: " << unionType->getRight()->toString()
+                << RESET << "\n";
+      indentLevel_--;
     }
-    std::cout << RESET << "\n";
   }
 
   static std::string getOperatorString(tokens::TokenType op) {
@@ -119,23 +243,6 @@ private:
     }
   }
 
-  static std::string getTypeString(tokens::TokenType type) {
-    switch (type) {
-    case tokens::TokenType::INT:
-      return "INT";
-    case tokens::TokenType::FLOAT:
-      return "FLOAT";
-    case tokens::TokenType::BOOLEAN:
-      return "BOOLEAN";
-    case tokens::TokenType::STRING:
-      return "STRING";
-    case tokens::TokenType::VOID:
-      return "VOID";
-    default:
-      return "UNKNOWN";
-    }
-  }
-
 public:
   void print(const parser::AST &ast) {
     std::cout << "\nAbstract Syntax Tree:\n" << std::string(80, '-') << "\n";
@@ -150,7 +257,7 @@ public:
       if (auto varDecl = std::dynamic_pointer_cast<nodes::VarDeclNode>(node)) {
         visitVarDecl(varDecl.get());
       }
-      // Add other node types as needed
+      // Add other node types as needed.
     }
 
     std::cout << std::string(80, '-') << "\n";
@@ -172,4 +279,4 @@ public:
   }
 };
 
-} // namespace debug
+} // namespace core
