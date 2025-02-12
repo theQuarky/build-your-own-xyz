@@ -1,46 +1,47 @@
 #pragma once
 #include "class_decl_visitor.h"
-#include "core/diagnostics/error_reporter.h"
 #include "func_decl_visitor.h"
+#include "ideclaration_visitor.h"
 #include "parser/nodes/declaration_nodes.h"
-#include "parser/visitors/parse_visitor/statement/statement_parse_visitor.h"
-#include "tokens/stream/token_stream.h"
+#include "parser/visitors/parse_visitor/expression/iexpression_visitor.h"
 #include "var_decl_visitor.h"
 
 namespace visitors {
 
-class DeclarationParseVisitor {
+class ExpressionParseVisitor;
+class StatementParseVisitor;
+
+class DeclarationParseVisitor : public IDeclarationVisitor {
 public:
   DeclarationParseVisitor(tokens::TokenStream &tokens,
                           core::ErrorReporter &errorReporter,
-                          ExpressionParseVisitor &exprVisitor,
-                          StatementParseVisitor &stmtVisitor);
+                          IExpressionVisitor &exprVisitor,
+                          IStatementVisitor &stmtVisitor);
 
-  nodes::DeclPtr parseDeclaration();
-  nodes::TypePtr parseType();
-  nodes::BlockPtr parseBlock();
+  nodes::DeclPtr parseDeclaration() override;
+  nodes::TypePtr parseType() override;
+  nodes::BlockPtr parseBlock() override;
 
 private:
+  // Utility methods
+  bool match(tokens::TokenType type);
+  bool check(tokens::TokenType type) const;
+  void error(const std::string &message);
+  bool consume(tokens::TokenType type, const std::string &message);
+  // Resources
   tokens::TokenStream &tokens_;
   core::ErrorReporter &errorReporter_;
-  ExpressionParseVisitor &exprVisitor_;
-  StatementParseVisitor &stmtVisitor_;
+  IExpressionVisitor &exprVisitor_;
+  IStatementVisitor &stmtVisitor_;
 
+  // Sub-visitors
   VariableDeclarationVisitor varDeclVisitor_;
   FunctionDeclarationVisitor funcDeclVisitor_;
   ClassDeclarationVisitor classDeclVisitor_;
 
   // Helper methods
   tokens::TokenType parseStorageClass();
-  nodes::TypePtr parsePrimaryType();
-  nodes::TypePtr parseTypeModifiers(nodes::TypePtr baseType);
   std::vector<nodes::AttributePtr> parseAttributeList();
   nodes::AttributePtr parseAttribute();
-  bool matchAny(const std::vector<tokens::TokenType> &types);
-  bool match(tokens::TokenType type);
-  bool check(tokens::TokenType type) const;
-  bool consume(tokens::TokenType type, const std::string &message);
-  void error(const std::string &message);
-  void synchronize();
 };
 } // namespace visitors

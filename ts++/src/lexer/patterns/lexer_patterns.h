@@ -26,7 +26,8 @@ public:
   }
 
   static const std::regex &getAttributePattern() {
-    static const std::regex pattern(R"(#[a-zA-Z_][a-zA-Z0-9_]*)");
+    static const std::regex pattern(
+        R"(#(stack|heap|static|shared|unique|weak|inline|unsafe|aligned)\b(?:\(([0-9]+)\))?)");
     return pattern;
   }
 

@@ -1,47 +1,45 @@
 #pragma once
 #include "core/diagnostics/error_reporter.h"
+#include "ideclaration_visitor.h"
 #include "parser/nodes/declaration_nodes.h"
+#include "parser/visitors/parse_visitor/expression/iexpression_visitor.h"
 #include "tokens/stream/token_stream.h"
-#include <functional>
 
 namespace visitors {
 
+class ExpressionParseVisitor;
+class DeclarationParseVisitor;
+
 class VariableDeclarationVisitor {
 public:
-  using ExprCallback = std::function<nodes::ExpressionPtr()>;
-  using TypeCallback = std::function<nodes::TypePtr()>;
-
   VariableDeclarationVisitor(tokens::TokenStream &tokens,
-                             core::ErrorReporter &errorReporter)
-      : tokens_(tokens), errorReporter_(errorReporter) {}
-
-  void setCallbacks(ExprCallback exprCb, TypeCallback typeCb) {
-    parseExpr_ = std::move(exprCb);
-    parseType_ = std::move(typeCb);
-  }
+                             core::ErrorReporter &errorReporter,
+                             IExpressionVisitor &exprVisitor,
+                             IDeclarationVisitor &declVisitor)
+      : tokens_(tokens), errorReporter_(errorReporter),
+        exprVisitor_(exprVisitor), declVisitor_(declVisitor) {}
 
   nodes::DeclPtr parseVarDecl(bool isConst, tokens::TokenType storageClass) {
     auto location = tokens_.peek().getLocation();
 
-    // Get identifier
     if (!match(tokens::TokenType::IDENTIFIER)) {
       error("Expected variable name");
       return nullptr;
     }
     auto name = tokens_.previous().getLexeme();
 
-    // Handle type annotation
+    // Parse type annotation if present
     nodes::TypePtr type;
     if (match(tokens::TokenType::COLON)) {
-      type = parseType_();
+      type = declVisitor_.parseType();
       if (!type)
         return nullptr;
     }
 
-    // Handle initializer
+    // Parse initializer if present
     nodes::ExpressionPtr initializer;
     if (match(tokens::TokenType::EQUALS)) {
-      initializer = parseExpr_();
+      initializer = exprVisitor_.parseExpression();
       if (!initializer)
         return nullptr;
     } else if (isConst) {
@@ -49,7 +47,6 @@ public:
       return nullptr;
     }
 
-    // Expect semicolon
     if (!consume(tokens::TokenType::SEMICOLON,
                  "Expected ';' after variable declaration")) {
       return nullptr;
@@ -60,12 +57,7 @@ public:
   }
 
 private:
-  tokens::TokenStream &tokens_;
-  core::ErrorReporter &errorReporter_;
-  ExprCallback parseExpr_;
-  TypeCallback parseType_;
-
-  bool match(tokens::TokenType type) {
+  inline bool match(tokens::TokenType type) {
     if (check(type)) {
       tokens_.advance();
       return true;
@@ -73,11 +65,11 @@ private:
     return false;
   }
 
-  bool check(tokens::TokenType type) const {
+  inline bool check(tokens::TokenType type) const {
     return !tokens_.isAtEnd() && tokens_.peek().getType() == type;
   }
 
-  bool consume(tokens::TokenType type, const std::string &message) {
+  inline bool consume(tokens::TokenType type, const std::string &message) {
     if (check(type)) {
       tokens_.advance();
       return true;
@@ -86,8 +78,13 @@ private:
     return false;
   }
 
-  void error(const std::string &message) {
+  inline void error(const std::string &message) {
     errorReporter_.error(tokens_.peek().getLocation(), message);
   }
+
+  tokens::TokenStream &tokens_;
+  core::ErrorReporter &errorReporter_;
+  IExpressionVisitor &exprVisitor_;
+  IDeclarationVisitor &declVisitor_;
 };
 } // namespace visitors

@@ -1,24 +1,19 @@
 #pragma once
 #include "core/diagnostics/error_reporter.h"
 #include "parser/nodes/expression_nodes.h"
-#include "parser/nodes/type_nodes.h"
+#include "parser/visitors/parse_visitor/expression/iexpression_visitor.h"
 #include "tokens/stream/token_stream.h"
-#include <functional>
 
 namespace visitors {
 
+class ExpressionParseVisitor;
+
 class CastExpressionVisitor {
 public:
-  using ExprCallback = std::function<nodes::ExpressionPtr()>;
-  using TypeCallback = std::function<nodes::TypePtr()>;
-
   CastExpressionVisitor(tokens::TokenStream &tokens,
-                        core::ErrorReporter &errorReporter)
-      : tokens_(tokens), errorReporter_(errorReporter) {}
-
-  void setCallbacks(ExprCallback exprCb, TypeCallback typeCb) {
-    parseExpr_ = std::move(exprCb);
-    parseType_ = std::move(typeCb);
+                        core::ErrorReporter &errorReporter,
+                        IExpressionVisitor &parent)
+      : tokens_(tokens), errorReporter_(errorReporter), parentVisitor_(parent) {
   }
 
   nodes::ExpressionPtr parseCast() {
@@ -32,28 +27,33 @@ public:
       return nullptr;
     }
 
-    auto targetType = parseType_();
-    if (!targetType)
+    // Parse the target type
+    // Note: For now, we'll just collect the type name as a string
+    // This should be replaced with proper type parsing once implemented
+    if (!match(tokens::TokenType::IDENTIFIER)) {
+      error("Expected type name in cast expression");
       return nullptr;
+    }
+    std::string typeName = tokens_.previous().getLexeme();
 
     if (!match(tokens::TokenType::GREATER)) {
       error("Expected '>' after type in cast expression");
       return nullptr;
     }
 
-    auto expression = parseExpr_();
+    // Parse the expression to be cast
+    auto expression = parentVisitor_.parseExpression();
     if (!expression)
       return nullptr;
 
-    return std::make_shared<nodes::CastExpressionNode>(
-        location, targetType->toString(), expression);
+    return std::make_shared<nodes::CastExpressionNode>(location, typeName,
+                                                       expression);
   }
 
 private:
   tokens::TokenStream &tokens_;
   core::ErrorReporter &errorReporter_;
-  ExprCallback parseExpr_;
-  TypeCallback parseType_;
+  IExpressionVisitor &parentVisitor_;
 
   bool match(tokens::TokenType type) {
     if (check(type)) {

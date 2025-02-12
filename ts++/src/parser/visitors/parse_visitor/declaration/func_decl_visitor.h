@@ -1,24 +1,23 @@
 #pragma once
 #include "core/diagnostics/error_reporter.h"
+#include "ideclaration_visitor.h"
 #include "parser/nodes/declaration_nodes.h"
+#include "parser/visitors/parse_visitor/statement/istatement_visitor.h"
 #include "tokens/stream/token_stream.h"
-#include <functional>
 
 namespace visitors {
 
+class DeclarationParseVisitor;
+class StatementParseVisitor;
+
 class FunctionDeclarationVisitor {
 public:
-  using BlockCallback = std::function<nodes::BlockPtr()>;
-  using TypeCallback = std::function<nodes::TypePtr()>;
-
   FunctionDeclarationVisitor(tokens::TokenStream &tokens,
-                             core::ErrorReporter &errorReporter)
-      : tokens_(tokens), errorReporter_(errorReporter) {}
-
-  void setCallbacks(BlockCallback blockCb, TypeCallback typeCb) {
-    parseBlock_ = std::move(blockCb);
-    parseType_ = std::move(typeCb);
-  }
+                             core::ErrorReporter &errorReporter,
+                             IDeclarationVisitor &declVisitor,
+                             IStatementVisitor &stmtVisitor)
+      : tokens_(tokens), errorReporter_(errorReporter),
+        declVisitor_(declVisitor), stmtVisitor_(stmtVisitor) {}
 
   nodes::DeclPtr parseFuncDecl() {
     auto location = tokens_.peek().getLocation();
@@ -41,7 +40,7 @@ public:
     // Parse return type
     nodes::TypePtr returnType;
     if (match(tokens::TokenType::COLON)) {
-      returnType = parseType_();
+      returnType = declVisitor_.parseType();
       if (!returnType)
         return nullptr;
     }
@@ -49,7 +48,7 @@ public:
     // Parse function body
     nodes::BlockPtr body;
     if (match(tokens::TokenType::LEFT_BRACE)) {
-      body = parseBlock_();
+      body = declVisitor_.parseBlock();
       if (!body)
         return nullptr;
     } else {
@@ -64,11 +63,6 @@ public:
   }
 
 private:
-  tokens::TokenStream &tokens_;
-  core::ErrorReporter &errorReporter_;
-  BlockCallback parseBlock_;
-  TypeCallback parseType_;
-
   std::vector<nodes::ParamPtr> parseParameterList() {
     std::vector<nodes::ParamPtr> parameters;
 
@@ -106,29 +100,20 @@ private:
       return nullptr;
     }
 
-    auto type = parseType_();
+    auto type = declVisitor_.parseType();
     if (!type)
       return nullptr;
 
     nodes::ExpressionPtr defaultValue;
     if (match(tokens::TokenType::EQUALS)) {
-      // Parse default value
-      defaultValue = parseDefaultValue();
-      if (!defaultValue)
-        return nullptr;
+      // TODO: Parse default value
     }
 
     return std::make_shared<nodes::ParameterNode>(name, type, defaultValue,
                                                   isRef, isConst, location);
   }
 
-  nodes::ExpressionPtr parseDefaultValue() {
-    // This would be implemented to parse literal values only
-    // For now, return nullptr
-    return nullptr;
-  }
-
-  bool match(tokens::TokenType type) {
+  inline bool match(tokens::TokenType type) {
     if (check(type)) {
       tokens_.advance();
       return true;
@@ -136,11 +121,11 @@ private:
     return false;
   }
 
-  bool check(tokens::TokenType type) const {
+  inline bool check(tokens::TokenType type) const {
     return !tokens_.isAtEnd() && tokens_.peek().getType() == type;
   }
 
-  bool consume(tokens::TokenType type, const std::string &message) {
+  inline bool consume(tokens::TokenType type, const std::string &message) {
     if (check(type)) {
       tokens_.advance();
       return true;
@@ -149,8 +134,15 @@ private:
     return false;
   }
 
-  void error(const std::string &message) {
+  inline void error(const std::string &message) {
     errorReporter_.error(tokens_.peek().getLocation(), message);
   }
+
+  tokens::TokenStream &tokens_;
+  core::ErrorReporter &errorReporter_;
+  IDeclarationVisitor &declVisitor_;
+  IStatementVisitor &stmtVisitor_;
+  ;
 };
+
 } // namespace visitors

@@ -1,26 +1,28 @@
+// call_visitor.h
 #pragma once
 #include "core/diagnostics/error_reporter.h"
 #include "parser/nodes/expression_nodes.h"
+#include "parser/visitors/parse_visitor/expression/iexpression_visitor.h"
 #include "tokens/stream/token_stream.h"
-#include <functional>
 
 namespace visitors {
 
+class ExpressionParseVisitor;
+
 class CallExpressionVisitor {
 public:
-  using ExpressionCallback = std::function<nodes::ExpressionPtr()>;
-
   CallExpressionVisitor(tokens::TokenStream &tokens,
-                        core::ErrorReporter &errorReporter)
-      : tokens_(tokens), errorReporter_(errorReporter) {}
-
-  void setExpressionCallback(ExpressionCallback callback) {
-    parseExpressionCallback = std::move(callback);
+                        core::ErrorReporter &errorReporter,
+                        IExpressionVisitor &parent)
+      : tokens_(tokens), errorReporter_(errorReporter), parentVisitor_(parent) {
   }
+
   nodes::ExpressionPtr parseCallOrMember(nodes::ExpressionPtr expr) {
     while (true) {
       if (match(tokens::TokenType::LEFT_PAREN)) {
         expr = finishCall(expr);
+        if (!expr)
+          return nullptr;
       } else if (match(tokens::TokenType::DOT)) {
         if (!match(tokens::TokenType::IDENTIFIER)) {
           error("Expected property name after '.'");
@@ -28,7 +30,9 @@ public:
         }
         expr = std::make_shared<nodes::MemberExpressionNode>(
             tokens_.previous().getLocation(), expr,
-            tokens_.previous().getLexeme(), false);
+            tokens_.previous().getLexeme(),
+            false // not a pointer access
+        );
       } else if (match(tokens::TokenType::AT)) {
         if (!match(tokens::TokenType::IDENTIFIER)) {
           error("Expected property name after '@'");
@@ -36,7 +40,22 @@ public:
         }
         expr = std::make_shared<nodes::MemberExpressionNode>(
             tokens_.previous().getLocation(), expr,
-            tokens_.previous().getLexeme(), true);
+            tokens_.previous().getLexeme(),
+            true // pointer access
+        );
+      } else if (match(tokens::TokenType::LEFT_BRACKET)) {
+        // Handle index access
+        auto index = parentVisitor_.parseExpression();
+        if (!index)
+          return nullptr;
+
+        if (!consume(tokens::TokenType::RIGHT_BRACKET,
+                     "Expected ']' after index")) {
+          return nullptr;
+        }
+
+        expr = std::make_shared<nodes::IndexExpressionNode>(
+            tokens_.previous().getLocation(), expr, index);
       } else {
         break;
       }
@@ -47,10 +66,12 @@ public:
 private:
   tokens::TokenStream &tokens_;
   core::ErrorReporter &errorReporter_;
+  IExpressionVisitor &parentVisitor_; // Changed to interface reference
 
   nodes::ExpressionPtr finishCall(nodes::ExpressionPtr callee) {
     std::vector<nodes::ExpressionPtr> arguments;
 
+    // Handle empty argument list
     if (!check(tokens::TokenType::RIGHT_PAREN)) {
       do {
         if (arguments.size() >= 255) {
@@ -58,7 +79,7 @@ private:
           return nullptr;
         }
 
-        auto arg = parseExpression();
+        auto arg = parentVisitor_.parseExpression();
         if (!arg)
           return nullptr;
         arguments.push_back(std::move(arg));
@@ -98,9 +119,6 @@ private:
   void error(const std::string &message) {
     errorReporter_.error(tokens_.peek().getLocation(), message);
   }
-
-  // Forward declaration - will be provided by main expression visitor
-  ExpressionCallback parseExpressionCallback;
-  nodes::ExpressionPtr parseExpression() { return parseExpressionCallback(); }
 };
+
 } // namespace visitors
