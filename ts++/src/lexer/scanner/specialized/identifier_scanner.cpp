@@ -7,59 +7,57 @@
  *****************************************************************************/
 
 #include "identifier_scanner.h"
-#include "lexer/patterns/lexer_patterns.h"
 #include "tokens/token_type.h"
 #include "tokens/tokens.h"
-#include <iostream>
+#include <algorithm>
 
 namespace lexer {
 
 namespace {
 // Cache the keyword map as a static member for efficiency
-const std::unordered_map<std::string_view, tokens::TokenType> &
-getKeywordMapImpl() {
-  static const std::unordered_map<std::string_view, tokens::TokenType>
-      keywords = {{"let", tokens::TokenType::LET},
-                  {"const", tokens::TokenType::CONST},
-                  {"function", tokens::TokenType::FUNCTION},
-                  {"class", tokens::TokenType::CLASS},
-                  {"interface", tokens::TokenType::INTERFACE},
-                  {"enum", tokens::TokenType::ENUM},
-                  {"typedef", tokens::TokenType::TYPEDEF},
-                  {"namespace", tokens::TokenType::NAMESPACE},
-                  {"if", tokens::TokenType::IF},
-                  {"else", tokens::TokenType::ELSE},
-                  {"for", tokens::TokenType::FOR},
-                  {"while", tokens::TokenType::WHILE},
-                  {"do", tokens::TokenType::DO},
-                  {"break", tokens::TokenType::BREAK},
-                  {"continue", tokens::TokenType::CONTINUE},
-                  {"return", tokens::TokenType::RETURN},
-                  {"true", tokens::TokenType::TRUE},
-                  {"false", tokens::TokenType::FALSE},
-                  {"null", tokens::TokenType::NULL_VALUE},
-                  {"undefined", tokens::TokenType::UNDEFINED},
-                  {"this", tokens::TokenType::THIS},
-                  {"void", tokens::TokenType::VOID},
-                  {"int", tokens::TokenType::INT},
-                  {"float", tokens::TokenType::FLOAT},
-                  {"bool", tokens::TokenType::BOOLEAN},
-                  {"string", tokens::TokenType::STRING},
-                  {"try", tokens::TokenType::TRY},
-                  {"catch", tokens::TokenType::CATCH},
-                  {"switch", tokens::TokenType::SWITCH},
-                  {"case", tokens::TokenType::CASE},
-                  {"default", tokens::TokenType::DEFAULT},
-                  {"extends", tokens::TokenType::EXTENDS},
-                  {"implements", tokens::TokenType::IMPLEMENTS},
-                  {"public", tokens::TokenType::PUBLIC},
-                  {"private", tokens::TokenType::PRIVATE},
-                  {"protected", tokens::TokenType::PROTECTED},
-                  {"new", tokens::TokenType::NEW},
-                  {"throw", tokens::TokenType::THROW},
-                  {"typeof", tokens::TokenType::TYPEOF}
-
-      };
+const std::unordered_map<std::string, tokens::TokenType> &getKeywordMapImpl() {
+  static const std::unordered_map<std::string, tokens::TokenType> keywords = {
+      {"let", tokens::TokenType::LET},
+      {"const", tokens::TokenType::CONST},
+      {"function", tokens::TokenType::FUNCTION},
+      {"class", tokens::TokenType::CLASS},
+      {"interface", tokens::TokenType::INTERFACE},
+      {"enum", tokens::TokenType::ENUM},
+      {"typedef", tokens::TokenType::TYPEDEF},
+      {"namespace", tokens::TokenType::NAMESPACE},
+      {"if", tokens::TokenType::IF},
+      {"else", tokens::TokenType::ELSE},
+      {"for", tokens::TokenType::FOR},
+      {"while", tokens::TokenType::WHILE},
+      {"do", tokens::TokenType::DO},
+      {"break", tokens::TokenType::BREAK},
+      {"continue", tokens::TokenType::CONTINUE},
+      {"return", tokens::TokenType::RETURN},
+      {"true", tokens::TokenType::TRUE},
+      {"false", tokens::TokenType::FALSE},
+      {"null", tokens::TokenType::NULL_VALUE},
+      {"undefined", tokens::TokenType::UNDEFINED},
+      {"this", tokens::TokenType::THIS},
+      {"void", tokens::TokenType::VOID},
+      {"int", tokens::TokenType::INT},
+      {"float", tokens::TokenType::FLOAT},
+      {"bool", tokens::TokenType::BOOLEAN},
+      {"string", tokens::TokenType::STRING},
+      {"try", tokens::TokenType::TRY},
+      {"catch", tokens::TokenType::CATCH},
+      {"switch", tokens::TokenType::SWITCH},
+      {"case", tokens::TokenType::CASE},
+      {"default", tokens::TokenType::DEFAULT},
+      {"extends", tokens::TokenType::EXTENDS},
+      {"implements", tokens::TokenType::IMPLEMENTS},
+      {"public", tokens::TokenType::PUBLIC},
+      {"private", tokens::TokenType::PRIVATE},
+      {"protected", tokens::TokenType::PROTECTED},
+      {"new", tokens::TokenType::NEW},
+      {"throw", tokens::TokenType::THROW},
+      {"typeof", tokens::TokenType::TYPEOF},
+      {"unsafe", tokens::TokenType::UNSAFE},
+      {"aligned", tokens::TokenType::ALIGNED}};
   return keywords;
 }
 } // namespace
@@ -81,49 +79,94 @@ tokens::Token IdentifierScanner::scan() {
     advance();
   }
 
-  // Calculate length
+  // Directly get source data and length - avoiding intermediate string_view
+  const char *data = state_->getSource().data() + start;
   size_t length = state_->getPosition() - start;
 
-  // Get source string_view and extract lexeme for validation and type checking
-  std::string_view source = state_->getSource();
-  std::string_view lexeme = source.substr(start, length);
-
-  if (!validateIdentifier(lexeme)) {
-    return makeErrorToken("Invalid identifier");
+  // Check if this identifier follows @ token
+  bool afterAt = false;
+  if (start > 0) {
+    char prevChar = state_->getSource()[start - 1];
+    afterAt = (prevChar == '@');
   }
 
-  // Check if it's a keyword and get its type
-  tokens::TokenType type = identifierType(lexeme);
+  if (afterAt) {
+    // Compare directly with string_view from static memory
+    std::string_view id(data, length);
+    if (id == "unsafe" || id == "aligned") {
+      if (id == "aligned" && peek() == '(') {
+        advance(); // Skip (
+        while (!isAtEnd() && peek() != ')')
+          advance();
+        if (peek() == ')')
+          advance();
+      }
+      return makeToken(id == "unsafe" ? tokens::TokenType::UNSAFE
+                                      : tokens::TokenType::ALIGNED,
+                       start, state_->getPosition() - start);
+    }
+  }
 
-  // Create token with determined type
-  return makeToken(type, start, length);
+  // For identifier type check, use a stable string_view
+  std::string_view identifier(data, length);
+  return makeToken(identifierType(identifier), start, length);
 }
 
 tokens::Token IdentifierScanner::scanAttribute() {
   size_t start = state_->getPosition();
   advance(); // Skip #
 
+  size_t nameStart = state_->getPosition(); // Start after #
+
   // Scan attribute name
-  while (!isAtEnd() && (std::isalnum(peek()) || peek() == '_')) {
+  while (!isAtEnd() && (std::isalpha(peek()) || peek() == '_')) {
     advance();
   }
 
-  // Create string directly instead of string_view
-  const std::string &source = state_->getSource();
-  std::string fullAttr = source.substr(start, state_->getPosition() - start);
-  // Check if it's a valid attribute name
-  if (!lexer::LexerPatterns::isValidAttribute(fullAttr)) {
-    return makeErrorToken("Unknown attribute");
+  // Create a direct view of the attribute name
+  const char *data = state_->getSource().data() + nameStart;
+  size_t length = state_->getPosition() - nameStart;
+  std::string_view attrName(data, length);
+
+  // Map attribute to token type
+  tokens::TokenType type;
+  if (attrName == "stack")
+    type = tokens::TokenType::STACK;
+  else if (attrName == "heap")
+    type = tokens::TokenType::HEAP;
+  else if (attrName == "static")
+    type = tokens::TokenType::STATIC;
+  else if (attrName == "shared")
+    type = tokens::TokenType::SHARED;
+  else if (attrName == "unique")
+    type = tokens::TokenType::UNIQUE;
+  else if (attrName == "weak")
+    type = tokens::TokenType::WEAK;
+  else if (attrName == "inline")
+    type = tokens::TokenType::INLINE;
+  else if (attrName == "aligned")
+    type = tokens::TokenType::ALIGNED;
+  else
+    type = tokens::TokenType::ATTRIBUTE;
+
+  // Handle aligned attribute parameters if present
+  if (peek() == '(') {
+    advance(); // Skip (
+    while (!isAtEnd() && peek() != ')') {
+      advance(); // Skip parameter
+    }
+    if (peek() == ')') {
+      advance(); // Skip )
+    }
   }
 
-  return makeToken(tokens::TokenType::ATTRIBUTE, start,
-                   state_->getPosition() - start);
+  return makeToken(type, start, state_->getPosition() - start);
 }
 
 /*****************************************************************************
  * Private Helper Methods
  *****************************************************************************/
-const std::unordered_map<std::string_view, tokens::TokenType> &
+const std::unordered_map<std::string, tokens::TokenType> &
 IdentifierScanner::getKeywordMap() {
   return getKeywordMapImpl();
 }
@@ -145,7 +188,9 @@ bool IdentifierScanner::validateIdentifier(std::string_view lexeme) {
 
 tokens::TokenType IdentifierScanner::identifierType(std::string_view lexeme) {
   auto &keywords = getKeywordMap();
-  auto it = keywords.find(lexeme);
+  // Convert to string for lookup
+  std::string key(lexeme);
+  auto it = keywords.find(key);
   return it != keywords.end() ? it->second : tokens::TokenType::IDENTIFIER;
 }
 

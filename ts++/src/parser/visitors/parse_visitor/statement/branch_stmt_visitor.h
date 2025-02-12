@@ -1,24 +1,23 @@
 #pragma once
 #include "core/diagnostics/error_reporter.h"
 #include "parser/nodes/statement_nodes.h"
+#include "parser/visitors/parse_visitor/expression/iexpression_visitor.h"
+#include "parser/visitors/parse_visitor/statement/istatement_visitor.h"
 #include "tokens/stream/token_stream.h"
-#include <functional>
 
 namespace visitors {
 
+class ExpressionParseVisitor;
+class StatementParseVisitor;
+
 class BranchStatementVisitor {
 public:
-  using ExprCallback = std::function<nodes::ExpressionPtr()>;
-  using StmtCallback = std::function<nodes::StmtPtr()>;
-
   BranchStatementVisitor(tokens::TokenStream &tokens,
-                         core::ErrorReporter &errorReporter)
-      : tokens_(tokens), errorReporter_(errorReporter) {}
-
-  void setCallbacks(ExprCallback exprCb, StmtCallback stmtCb) {
-    parseExpr_ = std::move(exprCb);
-    parseStmt_ = std::move(stmtCb);
-  }
+                         core::ErrorReporter &errorReporter,
+                         IExpressionVisitor &exprVisitor,
+                         IStatementVisitor &stmtVisitor)
+      : tokens_(tokens), errorReporter_(errorReporter),
+        exprVisitor_(exprVisitor), stmtVisitor_(stmtVisitor) {}
 
   nodes::StmtPtr parseIfStatement() {
     auto location = tokens_.previous().getLocation();
@@ -27,7 +26,7 @@ public:
       return nullptr;
     }
 
-    auto condition = parseExpr_();
+    auto condition = exprVisitor_.parseExpression();
     if (!condition)
       return nullptr;
 
@@ -36,13 +35,13 @@ public:
       return nullptr;
     }
 
-    auto thenBranch = parseStmt_();
+    auto thenBranch = stmtVisitor_.parseStatement();
     if (!thenBranch)
       return nullptr;
 
     nodes::StmtPtr elseBranch;
     if (match(tokens::TokenType::ELSE)) {
-      elseBranch = parseStmt_();
+      elseBranch = stmtVisitor_.parseStatement();
       if (!elseBranch)
         return nullptr;
     }
@@ -57,12 +56,7 @@ public:
   }
 
 private:
-  tokens::TokenStream &tokens_;
-  core::ErrorReporter &errorReporter_;
-  ExprCallback parseExpr_;
-  StmtCallback parseStmt_;
-
-  bool match(tokens::TokenType type) {
+  inline bool match(tokens::TokenType type) {
     if (check(type)) {
       tokens_.advance();
       return true;
@@ -70,11 +64,11 @@ private:
     return false;
   }
 
-  bool check(tokens::TokenType type) const {
+  inline bool check(tokens::TokenType type) const {
     return !tokens_.isAtEnd() && tokens_.peek().getType() == type;
   }
 
-  bool consume(tokens::TokenType type, const std::string &message) {
+  inline bool consume(tokens::TokenType type, const std::string &message) {
     if (check(type)) {
       tokens_.advance();
       return true;
@@ -83,8 +77,15 @@ private:
     return false;
   }
 
-  void error(const std::string &message) {
+  inline void error(const std::string &message) {
     errorReporter_.error(tokens_.peek().getLocation(), message);
   }
+
+  tokens::TokenStream &tokens_;
+  core::ErrorReporter &errorReporter_;
+  IExpressionVisitor &exprVisitor_;
+  IStatementVisitor &stmtVisitor_;
+  ;
 };
+
 } // namespace visitors

@@ -143,18 +143,20 @@ public:
     return true;
   }
 
-  // get category of type
   static std::string getTokenCategory(tokens::TokenType type) {
-    // Order matters here. If multiple checks could match, the first match
-    // "wins." For instance, if a token is recognized as a PrimitiveType, we
-    // return immediately.
-    
-    if (isPrimitiveType(type)) {
+    // We need to add checks for delimiters
+    if (isDelimiter(type)) {
+      return "Delimiter";
+    }
+    // Storage modifiers should come before typeModifier check
+    else if (isMemoryManagement(type)) {
+      return "StorageModifier";
+    }
+    // Rest of the existing checks
+    else if (isPrimitiveType(type)) {
       return "PrimitiveType";
     } else if (isTypeModifier(type)) {
       return "TypeModifier";
-    } else if (isStorageModifier(type)) {
-      return "StorageModifier";
     } else if (isFunctionModifier(type)) {
       return "FunctionModifier";
     } else if (isClassModifier(type)) {
@@ -167,16 +169,12 @@ public:
       return "Operator";
     } else if (isAccessModifier(type)) {
       return "AccessModifier";
-    }
-    // If your codebase also has checks for "Declaration" or "Type", you might
-    // do:
-    else if (isDeclaration(type)) {
+    } else if (isDeclaration(type)) {
       return "Declaration";
     } else if (isType(type)) {
       return "Type";
     }
 
-    // Fallback category if none of the above match
     return "Unknown";
   }
 

@@ -1,33 +1,18 @@
 #include "statement_parse_visitor.h"
+#include "parser/nodes/declaration_nodes.h"
 
 namespace visitors {
 
 StatementParseVisitor::StatementParseVisitor(
     tokens::TokenStream &tokens, core::ErrorReporter &errorReporter,
-    ExpressionParseVisitor &exprVisitor)
+    IExpressionVisitor &exprVisitor)
     : tokens_(tokens), errorReporter_(errorReporter), exprVisitor_(exprVisitor),
-      branchVisitor_(tokens, errorReporter),
-      loopVisitor_(tokens, errorReporter), tryVisitor_(tokens, errorReporter),
-      flowVisitor_(tokens, errorReporter) {
-
-  // Setup branch visitor callbacks
-  branchVisitor_.setCallbacks(
-      [this]() { return exprVisitor_.parseExpression(); },
-      [this]() { return parseStatement(); });
-
-  // Setup loop visitor callbacks
-  loopVisitor_.setCallbacks([this]() { return exprVisitor_.parseExpression(); },
-                            [this]() { return parseStatement(); });
-
-  // Setup try-catch visitor callbacks
-  tryVisitor_.setCallbacks(
-      [this]() { return parseStatement(); },
-      nullptr // TODO: Add type parsing callback once implemented
-  );
-
-  // Setup flow control visitor callback
-  flowVisitor_.setExpressionCallback(
-      [this]() { return exprVisitor_.parseExpression(); });
+      branchVisitor_(tokens, errorReporter, exprVisitor, *this),
+      loopVisitor_(tokens, errorReporter, exprVisitor, *this),
+      flowVisitor_(tokens, errorReporter, exprVisitor),
+      tryVisitor_(tokens, errorReporter, *this) {
+  assert(&tokens != nullptr && "Token stream cannot be null");
+  assert(&errorReporter != nullptr && "Error reporter cannot be null");
 }
 
 nodes::StmtPtr StatementParseVisitor::parseStatement() {
@@ -71,10 +56,8 @@ nodes::StmtPtr StatementParseVisitor::parseStatement() {
     }
 
     return parseExpressionStatement();
-
   } catch (const std::exception &e) {
-    error(std::string("Unexpected error while parsing statement: ") + e.what());
-    synchronize();
+    error(std::string("Error parsing statement: ") + e.what());
     return nullptr;
   }
 }
@@ -145,58 +128,6 @@ nodes::StmtPtr StatementParseVisitor::parseAssemblyStatement() {
 
   return std::make_shared<nodes::AssemblyStmtNode>(
       asmCode, std::move(constraints), location);
-}
-
-bool StatementParseVisitor::match(tokens::TokenType type) {
-  if (check(type)) {
-    tokens_.advance();
-    return true;
-  }
-  return false;
-}
-
-bool StatementParseVisitor::check(tokens::TokenType type) const {
-  return !tokens_.isAtEnd() && tokens_.peek().getType() == type;
-}
-
-bool StatementParseVisitor::consume(tokens::TokenType type,
-                                    const std::string &message) {
-  if (check(type)) {
-    tokens_.advance();
-    return true;
-  }
-  error(message);
-  return false;
-}
-
-void StatementParseVisitor::error(const std::string &message) {
-  errorReporter_.error(tokens_.peek().getLocation(), message);
-}
-
-void StatementParseVisitor::synchronize() {
-  tokens_.advance();
-
-  while (!tokens_.isAtEnd()) {
-    if (tokens_.previous().getType() == tokens::TokenType::SEMICOLON) {
-      return;
-    }
-
-    switch (tokens_.peek().getType()) {
-    case tokens::TokenType::CLASS:
-    case tokens::TokenType::FUNCTION:
-    case tokens::TokenType::LET:
-    case tokens::TokenType::CONST:
-    case tokens::TokenType::FOR:
-    case tokens::TokenType::IF:
-    case tokens::TokenType::WHILE:
-    case tokens::TokenType::RETURN:
-      return;
-    default:
-      break;
-    }
-
-    tokens_.advance();
-  }
 }
 
 } // namespace visitors
