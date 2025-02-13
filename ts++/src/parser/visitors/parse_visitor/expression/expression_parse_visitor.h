@@ -21,6 +21,9 @@ public:
   nodes::ExpressionPtr parsePrimary() override;
   nodes::ExpressionPtr parseUnary() override;
   nodes::TypePtr parseType() override;
+  nodes::ExpressionPtr parseAdditive();
+  nodes::ExpressionPtr parseAssignment();
+  nodes::ExpressionPtr parseMultiplicative();
 
   // Friend declarations for sub-visitors
   friend class BinaryExpressionVisitor;
@@ -30,7 +33,6 @@ public:
   friend class CastExpressionVisitor;
 
 private:
-
   // Utility methods
   bool match(tokens::TokenType type);
   bool check(tokens::TokenType type) const;
