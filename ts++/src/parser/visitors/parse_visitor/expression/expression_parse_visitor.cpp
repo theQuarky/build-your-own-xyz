@@ -11,23 +11,14 @@ ExpressionParseVisitor::ExpressionParseVisitor(
       callVisitor_(tokens, errorReporter, *this),
       castVisitor_(tokens, errorReporter, *this) {
   // Validate constructor parameters
-  assert(&tokens != nullptr && "Token stream cannot be null");
-  assert(&errorReporter != nullptr && "Error reporter cannot be null");
+  // assert(&tokens != nullptr && "Token stream cannot be null");
+  // assert(&errorReporter != nullptr && "Error reporter cannot be null");
 }
 
 nodes::ExpressionPtr ExpressionParseVisitor::parseExpression() {
   try {
-    // Handle cast expressions
-    if (tokens_.peek().getLexeme() == "cast") {
-      return castVisitor_.parseCast();
-    }
-
-    // Parse expression chain
-    auto expr = unaryVisitor_.parseUnary();
-    if (!expr)
-      return nullptr;
-
-    expr = binaryVisitor_.parseBinary(expr, 0);
+    // Start with assignment parsing since it has lowest precedence
+    auto expr = parseAssignment();
     if (!expr)
       return nullptr;
 
@@ -37,6 +28,71 @@ nodes::ExpressionPtr ExpressionParseVisitor::parseExpression() {
                          std::string("Error parsing expression: ") + e.what());
     return nullptr;
   }
+}
+
+nodes::ExpressionPtr ExpressionParseVisitor::parseAssignment() {
+  // First parse left side (which could be an identifier or a more complex
+  // expression)
+  auto expr = parseAdditive();
+  if (!expr)
+    return nullptr;
+
+  // Check if this is an assignment
+  if (match(tokens::TokenType::EQUALS) ||
+      match(tokens::TokenType::PLUS_EQUALS) ||
+      match(tokens::TokenType::MINUS_EQUALS) ||
+      match(tokens::TokenType::STAR_EQUALS) ||
+      match(tokens::TokenType::SLASH_EQUALS)) {
+
+    auto op = tokens_.previous().getType();
+
+    // Parse right side of assignment
+    auto value = parseAssignment(); // Assignments are right-associative
+    if (!value)
+      return nullptr;
+
+    // Create assignment node
+    expr = std::make_shared<nodes::AssignmentExpressionNode>(
+        expr->getLocation(), op, expr, value);
+  }
+
+  return expr;
+}
+
+nodes::ExpressionPtr ExpressionParseVisitor::parseAdditive() {
+  auto expr = parseMultiplicative();
+  if (!expr)
+    return nullptr;
+
+  while (match(tokens::TokenType::PLUS) || match(tokens::TokenType::MINUS)) {
+    auto op = tokens_.previous().getType();
+    auto right = parseMultiplicative();
+    if (!right)
+      return nullptr;
+
+    expr = std::make_shared<nodes::BinaryExpressionNode>(expr->getLocation(),
+                                                         op, expr, right);
+  }
+
+  return expr;
+}
+
+nodes::ExpressionPtr ExpressionParseVisitor::parseMultiplicative() {
+  auto expr = parseUnary();
+  if (!expr)
+    return nullptr;
+
+  while (match(tokens::TokenType::STAR) || match(tokens::TokenType::SLASH)) {
+    auto op = tokens_.previous().getType();
+    auto right = parseUnary();
+    if (!right)
+      return nullptr;
+
+    expr = std::make_shared<nodes::BinaryExpressionNode>(expr->getLocation(),
+                                                         op, expr, right);
+  }
+
+  return expr;
 }
 
 nodes::ExpressionPtr ExpressionParseVisitor::parsePrimary() {

@@ -12,8 +12,8 @@ DeclarationParseVisitor::DeclarationParseVisitor(
       varDeclVisitor_(tokens, errorReporter, exprVisitor, *this),
       funcDeclVisitor_(tokens, errorReporter, *this, stmtVisitor),
       classDeclVisitor_(tokens, errorReporter, *this) {
-  assert(&tokens != nullptr && "Token stream cannot be null");
-  assert(&errorReporter != nullptr && "Error reporter cannot be null");
+  // assert(&tokens != nullptr && "Token stream cannot be null");
+  // assert(&errorReporter != nullptr && "Error reporter cannot be null");
 }
 
 nodes::DeclPtr DeclarationParseVisitor::parseDeclaration() {
@@ -53,16 +53,26 @@ nodes::DeclPtr DeclarationParseVisitor::parseDeclaration() {
 }
 
 nodes::TypePtr DeclarationParseVisitor::parseType() {
-  if (!check(tokens::TokenType::IDENTIFIER)) {
-    error("Expected type name");
-    return nullptr;
-  }
+    auto location = tokens_.peek().getLocation();
 
-  auto location = tokens_.peek().getLocation();
-  auto name = tokens_.peek().getLexeme();
-  tokens_.advance();
+    // Handle primitive types
+    if (tokens::TokenType::TYPE_BEGIN <= tokens_.peek().getType() && 
+        tokens_.peek().getType() <= tokens::TokenType::TYPE_END) {
+        auto type = tokens_.peek().getType();
+        tokens_.advance();
+        return std::make_shared<nodes::PrimitiveTypeNode>(type, location);
+    }
 
-  return std::make_shared<nodes::NamedTypeNode>(name, location);
+    // Handle user-defined types (identifiers)
+    if (!check(tokens::TokenType::IDENTIFIER)) {
+        error("Expected type name");
+        return nullptr;
+    }
+
+    auto name = tokens_.peek().getLexeme();
+    tokens_.advance();
+
+    return std::make_shared<nodes::NamedTypeNode>(name, location);
 }
 
 nodes::BlockPtr DeclarationParseVisitor::parseBlock() {
