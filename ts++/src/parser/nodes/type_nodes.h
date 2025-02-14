@@ -133,11 +133,14 @@ public:
   TypePtr getElementType() const { return elementType_; }
   ExpressionPtr getSize() const { return size_; }
   bool isArray() const override { return true; }
+
   bool accept(interface::BaseInterface *visitor) override {
     return visitor->visitParse();
-  };
+  }
+
   std::string toString() const override {
-    return elementType_->toString() + "[]";
+    std::string result = elementType_->toString() + "[]";
+    return result;
   }
 
 private:
@@ -331,6 +334,10 @@ private:
   TypePtr left_;
   TypePtr right_;
 };
+
+/*
+// array type node
+*/
 
 // Forward declarations for type visitors
 class TypeVisitor {

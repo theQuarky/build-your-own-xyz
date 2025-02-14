@@ -18,8 +18,7 @@ DeclarationParseVisitor::DeclarationParseVisitor(
 
 nodes::DeclPtr DeclarationParseVisitor::parseDeclaration() {
   try {
-    // Parse attributes
-    auto attributes = parseAttributeList();
+    auto location = tokens_.peek().getLocation();
 
     // Parse storage class
     tokens::TokenType storageClass = tokens::TokenType::ERROR_TOKEN;
@@ -28,6 +27,8 @@ nodes::DeclPtr DeclarationParseVisitor::parseDeclaration() {
       storageClass = tokens_.peek().getType();
       tokens_.advance(); // Consume the storage class token
     }
+    // Parse attributes
+    auto attributes = parseAttributeList();
 
     // Parse the actual declaration
     nodes::DeclPtr result;
@@ -60,24 +61,46 @@ nodes::DeclPtr DeclarationParseVisitor::parseDeclaration() {
 nodes::TypePtr DeclarationParseVisitor::parseType() {
   auto location = tokens_.peek().getLocation();
 
+  // Parse base type
+  nodes::TypePtr baseType;
+
   // Handle primitive types
   if (tokens::TokenType::TYPE_BEGIN <= tokens_.peek().getType() &&
       tokens_.peek().getType() <= tokens::TokenType::TYPE_END) {
     auto type = tokens_.peek().getType();
     tokens_.advance();
-    return std::make_shared<nodes::PrimitiveTypeNode>(type, location);
+    baseType = std::make_shared<nodes::PrimitiveTypeNode>(type, location);
   }
-
   // Handle user-defined types (identifiers)
-  if (!check(tokens::TokenType::IDENTIFIER)) {
+  else if (check(tokens::TokenType::IDENTIFIER)) {
+    auto name = tokens_.peek().getLexeme();
+    tokens_.advance();
+    baseType = std::make_shared<nodes::NamedTypeNode>(name, location);
+  } else {
     error("Expected type name");
     return nullptr;
   }
 
-  auto name = tokens_.peek().getLexeme();
-  tokens_.advance();
+  // Check for array type
+  if (match(tokens::TokenType::LEFT_BRACKET)) {
+    // Parse optional size expression
+    nodes::ExpressionPtr sizeExpr;
+    if (!check(tokens::TokenType::RIGHT_BRACKET)) {
+      sizeExpr = exprVisitor_.parseExpression();
+      if (!sizeExpr)
+        return nullptr;
+    }
 
-  return std::make_shared<nodes::NamedTypeNode>(name, location);
+    if (!consume(tokens::TokenType::RIGHT_BRACKET,
+                 "Expected ']' after array type")) {
+      return nullptr;
+    }
+
+    // Create array type node
+    return std::make_shared<nodes::ArrayTypeNode>(baseType, sizeExpr, location);
+  }
+
+  return baseType;
 }
 
 nodes::BlockPtr DeclarationParseVisitor::parseBlock() {
