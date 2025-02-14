@@ -99,6 +99,44 @@ nodes::TypePtr DeclarationParseVisitor::parseType() {
     // Create array type node
     return std::make_shared<nodes::ArrayTypeNode>(baseType, sizeExpr, location);
   }
+  // Check for pointer type
+  else if (match(tokens::TokenType::AT)) {
+    // Handle pointer modifiers
+    nodes::PointerTypeNode::PointerKind kind =
+        nodes::PointerTypeNode::PointerKind::Raw;
+    nodes::ExpressionPtr alignment;
+
+    if (match(tokens::TokenType::UNSAFE)) {
+      kind = nodes::PointerTypeNode::PointerKind::Unsafe;
+    } else if (check(tokens::TokenType::ALIGNED)) {
+      kind = nodes::PointerTypeNode::PointerKind::Aligned;
+      tokens_.advance(); // consume aligned
+
+      // Parse alignment value in parentheses
+      if (!consume(tokens::TokenType::LEFT_PAREN,
+                   "Expected '(' after aligned")) {
+        return nullptr;
+      }
+
+      // Parse alignment expression
+      if (!match(tokens::TokenType::NUMBER)) {
+        error("Expected alignment value");
+        return nullptr;
+      }
+      alignment = std::make_shared<nodes::LiteralExpressionNode>(
+          tokens_.previous().getLocation(), tokens::TokenType::NUMBER,
+          tokens_.previous().getLexeme());
+
+      if (!consume(tokens::TokenType::RIGHT_PAREN,
+                   "Expected ')' after alignment value")) {
+        return nullptr;
+      }
+    }
+
+    // Create pointer type node
+    return std::make_shared<nodes::PointerTypeNode>(baseType, kind, alignment,
+                                                    location);
+  }
 
   return baseType;
 }
