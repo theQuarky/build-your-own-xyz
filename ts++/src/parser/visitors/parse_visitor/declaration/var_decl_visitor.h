@@ -19,48 +19,46 @@ public:
       : tokens_(tokens), errorReporter_(errorReporter),
         exprVisitor_(exprVisitor), declVisitor_(declVisitor) {}
 
-nodes::DeclPtr parseVarDecl(bool isConst, tokens::TokenType storageClass) {
+  nodes::DeclPtr parseVarDecl(bool isConst, tokens::TokenType storageClass) {
     auto location = tokens_.peek().getLocation();
 
     if (!match(tokens::TokenType::IDENTIFIER)) {
-        error("Expected variable name");
-        return nullptr;
+      error("Expected variable name");
+      return nullptr;
     }
     auto name = tokens_.previous().getLexeme();
 
     // Parse type annotation if present
     nodes::TypePtr type;
     if (match(tokens::TokenType::COLON)) {
-        type = declVisitor_.parseType();
-        if (!type) return nullptr;
+      type = declVisitor_.parseType();
+      if (!type)
+        return nullptr;
     }
 
     // Parse initializer if present
     nodes::ExpressionPtr initializer;
     if (match(tokens::TokenType::EQUALS)) {
-        initializer = exprVisitor_.parseExpression();
-        if (!initializer) return nullptr;
-    } else if (isConst) {
-        error("Const declarations must have an initializer");
+      initializer = exprVisitor_.parseExpression();
+      if (!initializer)
         return nullptr;
+    } else if (isConst) {
+      error("Const declarations must have an initializer");
+      return nullptr;
     }
 
-    if (!consume(tokens::TokenType::SEMICOLON, "Expected ';' after variable declaration")) {
-        return nullptr;
+    if (!consume(tokens::TokenType::SEMICOLON,
+                 "Expected ';' after variable declaration")) {
+      return nullptr;
     }
 
     // Create variable declaration with storage class
-    auto varDecl = std::make_shared<nodes::VarDeclNode>(
-        name,
-        type,
-        initializer,
-        storageClass,
-        isConst,
-        location
-    );
+    return std::make_shared<nodes::VarDeclNode>(
+        name, type, initializer,
+        storageClass, // Pass through the storage class
+        isConst, location);
+  }
 
-    return varDecl;
-}
 private:
   inline bool match(tokens::TokenType type) {
     if (check(type)) {
