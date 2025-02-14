@@ -22,7 +22,12 @@ nodes::DeclPtr DeclarationParseVisitor::parseDeclaration() {
     auto attributes = parseAttributeList();
 
     // Parse storage class
-    tokens::TokenType storageClass = parseStorageClass();
+    tokens::TokenType storageClass = tokens::TokenType::ERROR_TOKEN;
+    if (check(tokens::TokenType::STACK) || check(tokens::TokenType::HEAP) ||
+        check(tokens::TokenType::STATIC)) {
+      storageClass = tokens_.peek().getType();
+      tokens_.advance(); // Consume the storage class token
+    }
 
     // Parse the actual declaration
     nodes::DeclPtr result;
@@ -53,26 +58,26 @@ nodes::DeclPtr DeclarationParseVisitor::parseDeclaration() {
 }
 
 nodes::TypePtr DeclarationParseVisitor::parseType() {
-    auto location = tokens_.peek().getLocation();
+  auto location = tokens_.peek().getLocation();
 
-    // Handle primitive types
-    if (tokens::TokenType::TYPE_BEGIN <= tokens_.peek().getType() && 
-        tokens_.peek().getType() <= tokens::TokenType::TYPE_END) {
-        auto type = tokens_.peek().getType();
-        tokens_.advance();
-        return std::make_shared<nodes::PrimitiveTypeNode>(type, location);
-    }
-
-    // Handle user-defined types (identifiers)
-    if (!check(tokens::TokenType::IDENTIFIER)) {
-        error("Expected type name");
-        return nullptr;
-    }
-
-    auto name = tokens_.peek().getLexeme();
+  // Handle primitive types
+  if (tokens::TokenType::TYPE_BEGIN <= tokens_.peek().getType() &&
+      tokens_.peek().getType() <= tokens::TokenType::TYPE_END) {
+    auto type = tokens_.peek().getType();
     tokens_.advance();
+    return std::make_shared<nodes::PrimitiveTypeNode>(type, location);
+  }
 
-    return std::make_shared<nodes::NamedTypeNode>(name, location);
+  // Handle user-defined types (identifiers)
+  if (!check(tokens::TokenType::IDENTIFIER)) {
+    error("Expected type name");
+    return nullptr;
+  }
+
+  auto name = tokens_.peek().getLexeme();
+  tokens_.advance();
+
+  return std::make_shared<nodes::NamedTypeNode>(name, location);
 }
 
 nodes::BlockPtr DeclarationParseVisitor::parseBlock() {
@@ -102,9 +107,10 @@ std::vector<nodes::AttributePtr> DeclarationParseVisitor::parseAttributeList() {
   std::vector<nodes::AttributePtr> attributes;
 
   while (check(tokens::TokenType::ATTRIBUTE)) {
-    std::string lexeme = tokens_.peek().getLexeme();
-    // Break if it's a storage class token
-    if (lexeme == "#stack" || lexeme == "#heap" || lexeme == "#static") {
+    // Skip storage class attributes
+    if (tokens_.peek().getType() == tokens::TokenType::STACK ||
+        tokens_.peek().getType() == tokens::TokenType::HEAP ||
+        tokens_.peek().getType() == tokens::TokenType::STATIC) {
       break;
     }
 
@@ -115,7 +121,6 @@ std::vector<nodes::AttributePtr> DeclarationParseVisitor::parseAttributeList() {
   }
   return attributes;
 }
-
 nodes::AttributePtr DeclarationParseVisitor::parseAttribute() {
   auto location = tokens_.previous().getLocation();
   std::string lexeme = tokens_.previous().getLexeme();

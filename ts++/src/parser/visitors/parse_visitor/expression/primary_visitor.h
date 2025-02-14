@@ -17,6 +17,13 @@ public:
   }
 
   nodes::ExpressionPtr parsePrimary() {
+
+    if (check(tokens::TokenType::STACK) || check(tokens::TokenType::HEAP) ||
+        check(tokens::TokenType::STATIC)) {
+      // Return nullptr to signal this is not a primary expression
+      return nullptr;
+    }
+
     // Handle identifiers
     if (match(tokens::TokenType::IDENTIFIER)) {
       auto token = tokens_.previous();

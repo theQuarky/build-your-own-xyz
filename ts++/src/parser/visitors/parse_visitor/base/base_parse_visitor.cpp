@@ -56,11 +56,18 @@ nodes::NodePtr BaseParseVisitor::parseStatement() {
 }
 
 bool BaseParseVisitor::isDeclarationStart() const {
-  return tokens_.check(tokens::TokenType::ATTRIBUTE) ||
-         tokens_.check(tokens::TokenType::LET) ||
-         tokens_.check(tokens::TokenType::CONST) ||
-         tokens_.check(tokens::TokenType::FUNCTION) ||
-         tokens_.check(tokens::TokenType::CLASS);
+    // Check for storage class modifiers first
+    if (tokens_.check(tokens::TokenType::STACK) || 
+        tokens_.check(tokens::TokenType::HEAP) || 
+        tokens_.check(tokens::TokenType::STATIC) ||
+        tokens_.check(tokens::TokenType::ATTRIBUTE) ||
+        tokens_.check(tokens::TokenType::LET) ||
+        tokens_.check(tokens::TokenType::CONST) ||
+        tokens_.check(tokens::TokenType::FUNCTION) ||
+        tokens_.check(tokens::TokenType::CLASS)) {
+        return true;
+    }
+    return false;
 }
 
 void BaseParseVisitor::synchronize() {
