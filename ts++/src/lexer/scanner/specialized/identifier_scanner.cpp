@@ -94,16 +94,13 @@ tokens::Token IdentifierScanner::scan() {
     // Compare directly with string_view from static memory
     std::string_view id(data, length);
     if (id == "unsafe" || id == "aligned") {
-      if (id == "aligned" && peek() == '(') {
-        advance(); // Skip (
-        while (!isAtEnd() && peek() != ')')
-          advance();
-        if (peek() == ')')
-          advance();
+      if (id == "unsafe") {
+        return makeToken(tokens::TokenType::UNSAFE, start, length);
+      } else { // aligned
+        // Return just the 'aligned' token
+        auto token = makeToken(tokens::TokenType::ALIGNED, start, length);
+        return token;
       }
-      return makeToken(id == "unsafe" ? tokens::TokenType::UNSAFE
-                                      : tokens::TokenType::ALIGNED,
-                       start, state_->getPosition() - start);
     }
   }
 
@@ -144,9 +141,12 @@ tokens::Token IdentifierScanner::scanAttribute() {
     type = tokens::TokenType::WEAK;
   else if (attrName == "inline")
     type = tokens::TokenType::INLINE;
-  else if (attrName == "aligned")
+  else if (attrName == "aligned") {
     type = tokens::TokenType::ALIGNED;
-  else
+    // Return just the 'aligned' token, let the parser handle the parentheses
+    // and number
+    return makeToken(type, start, state_->getPosition() - start);
+  } else
     type = tokens::TokenType::ATTRIBUTE;
 
   // Handle aligned attribute parameters if present

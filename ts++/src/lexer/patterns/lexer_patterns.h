@@ -26,8 +26,9 @@ public:
   }
 
   static const std::regex &getAttributePattern() {
+    // Remove the optional (?:\(([0-9]+)\))? part
     static const std::regex pattern(
-        R"(#(stack|heap|static|shared|unique|weak|inline|unsafe|aligned)\b(?:\(([0-9]+)\))?)");
+        R"(#(stack|heap|static|shared|unique|weak|inline|unsafe|aligned)\b)");
     return pattern;
   }
 
