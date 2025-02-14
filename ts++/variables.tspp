@@ -7,12 +7,10 @@ let a = 42;
 const b: int = 10;
 
 /* 3. Heap-allocated floating point variable */
-#heap 
-let c: float = 3.14;
+#heap let c: float = 3.14;
 
 /* 4. Stack-allocated constant boolean with storage modifier */
-#stack 
-const d: bool = true;
+#stack const d: bool = true;
 
 /* 5. Fixed-size integer array initialization */
 let f: int[5] = 1;
@@ -62,6 +60,6 @@ let m: #weak<float> = 0;
 /* 20. Template type using Vector container */
 let n: Vector<int> = 0;
 
+/* TODO when we do it for functions */
 /* 21. Inline-optimized integer variable */
-#inline 
-let p: int = 42;
+// #inline let p: int = 42;
