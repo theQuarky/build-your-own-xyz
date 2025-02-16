@@ -24,7 +24,7 @@ const std::unordered_map<std::string_view, tokens::TokenType> operatorMap = {
     {"/", tokens::TokenType::SLASH},
     {"%", tokens::TokenType::PERCENT},
     {"?", tokens::TokenType::QUESTION},
-    
+
     // Braces and parentheses
     {"{", tokens::TokenType::LEFT_BRACE},
     {"}", tokens::TokenType::RIGHT_BRACE},
@@ -74,7 +74,7 @@ const std::unordered_map<std::string_view, tokens::TokenType> operatorMap = {
 
     // type assign operator
     {":", tokens::TokenType::COLON},
-
+    {",", tokens::TokenType::COMMA},
     // end of the line
     {";", tokens::TokenType::SEMICOLON}};
 

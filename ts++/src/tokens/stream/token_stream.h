@@ -106,6 +106,11 @@ public:
    */
   bool check(TokenType type) const;
 
+  /*
+   * return current token
+   */
+  Token getCurrentToken() { return tokens_[current_]; }
+
 private:
   std::vector<Token> tokens_; ///< Storage for token sequence
   size_t current_;            ///< Current position in token stream
