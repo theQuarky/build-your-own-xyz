@@ -17,10 +17,8 @@ public:
   }
 
   nodes::ExpressionPtr parsePrimary() {
-
-    if (check(tokens::TokenType::STACK) || check(tokens::TokenType::HEAP) ||
-        check(tokens::TokenType::STATIC)) {
-      // Return nullptr to signal this is not a primary expression
+    // Return nullptr for declaration keywords to prevent infinite loops
+    if (isDeclKeyword(tokens_.peek().getType())) {
       return nullptr;
     }
 
@@ -60,9 +58,21 @@ public:
   }
 
 private:
-  tokens::TokenStream &tokens_;
-  core::ErrorReporter &errorReporter_;
-  IExpressionVisitor &parentVisitor_;
+  bool isDeclKeyword(tokens::TokenType type) const {
+    switch (type) {
+    case tokens::TokenType::LET:
+    case tokens::TokenType::CONST:
+    case tokens::TokenType::FUNCTION:
+    case tokens::TokenType::CLASS:
+    case tokens::TokenType::INTERFACE:
+    case tokens::TokenType::STACK:
+    case tokens::TokenType::HEAP:
+    case tokens::TokenType::STATIC:
+      return true;
+    default:
+      return false;
+    }
+  }
 
   bool match(tokens::TokenType type) {
     if (check(type)) {
@@ -88,6 +98,10 @@ private:
   void error(const std::string &message) {
     errorReporter_.error(tokens_.peek().getLocation(), message);
   }
+
+  tokens::TokenStream &tokens_;
+  core::ErrorReporter &errorReporter_;
+  IExpressionVisitor &parentVisitor_;
 };
 
 } // namespace visitors

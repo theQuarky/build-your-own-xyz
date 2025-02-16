@@ -6,6 +6,7 @@
 #pragma once
 #include "base_node.h"
 #include "expression_nodes.h"
+#include "parser/nodes/declaration_nodes.h"
 #include "parser/nodes/type_nodes.h"
 #include <memory>
 #include <vector>
@@ -22,6 +23,22 @@ public:
 };
 
 using StmtPtr = std::shared_ptr<StatementNode>;
+
+class DeclarationStmtNode : public StatementNode {
+public:
+    DeclarationStmtNode(DeclPtr declaration, const core::SourceLocation& loc)
+        : StatementNode(loc)
+        , declaration_(std::move(declaration)) {}
+
+    const DeclPtr& getDeclaration() const { return declaration_; }
+    
+    bool accept(interface::BaseInterface* visitor) override {
+        return visitor->visitParse();
+    }
+
+private:
+    DeclPtr declaration_;
+};
 
 /**
  * Block statement: { statements... }

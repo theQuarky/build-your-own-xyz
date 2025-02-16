@@ -8,6 +8,7 @@
 #include "core/common/common_types.h"
 #include "tokens/token_type.h"
 #include <memory>
+#include <unordered_set>
 #include <vector>
 
 namespace nodes {
@@ -335,9 +336,68 @@ private:
   TypePtr right_;
 };
 
-/*
-// array type node
-*/
+class GenericParamNode : public nodes::TypeNode {
+public:
+  GenericParamNode(std::string name, std::vector<nodes::TypePtr> constraints,
+                   const core::SourceLocation &loc)
+      : TypeNode(loc), name_(std::move(name)),
+        constraints_(std::move(constraints)) {}
+
+  const std::string &getName() const { return name_; }
+  const std::vector<nodes::TypePtr> &getConstraints() const {
+    return constraints_;
+  }
+
+  bool isTemplate() const override { return true; }
+
+  std::string toString() const override {
+    std::string result = name_;
+    if (!constraints_.empty()) {
+      result += " extends ";
+      for (size_t i = 0; i < constraints_.size(); ++i) {
+        if (i > 0)
+          result += " & ";
+        result += constraints_[i]->toString();
+      }
+    }
+    return result;
+  }
+
+  bool accept(interface::BaseInterface *visitor) override {
+    return visitor->visitParse();
+  }
+
+private:
+  std::string name_;
+  std::vector<nodes::TypePtr> constraints_;
+};
+
+// Define the BuiltinConstraintNode class
+class BuiltinConstraintNode : public nodes::TypeNode {
+public:
+  BuiltinConstraintNode(std::string constraintName,
+                        const core::SourceLocation &loc)
+      : TypeNode(loc), constraintName_(std::move(constraintName)) {}
+
+  const std::string &getConstraintName() const { return constraintName_; }
+
+  std::string toString() const override { return constraintName_; }
+
+  bool accept(interface::BaseInterface *visitor) override {
+    return visitor->visitParse();
+  }
+
+private:
+  std::string constraintName_;
+};
+
+// Helper methods for checking valid constraint names
+inline bool isValidBuiltinConstraint(const std::string &name) {
+  static const std::unordered_set<std::string> builtinConstraints = {
+      "number",  "comparable",    "equatable",
+      "default", "constructible", "copyable"};
+  return builtinConstraints.find(name) != builtinConstraints.end();
+}
 
 // Forward declarations for type visitors
 class TypeVisitor {

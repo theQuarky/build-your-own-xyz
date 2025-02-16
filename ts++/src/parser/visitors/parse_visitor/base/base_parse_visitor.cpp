@@ -1,3 +1,4 @@
+// base_parse_visitor.cpp
 #include "base_parse_visitor.h"
 
 namespace visitors {
@@ -5,17 +6,23 @@ namespace visitors {
 BaseParseVisitor::BaseParseVisitor(tokens::TokenStream &tokens,
                                    core::ErrorReporter &errorReporter)
     : tokens_(tokens), errorReporter_(errorReporter) {
-  // Initialize parsers in correct order due to dependencies
+  // Initialize in the correct order
   expressionVisitor_ =
       std::make_unique<ExpressionParseVisitor>(tokens, errorReporter);
 
+  // Create statement visitor with just expression visitor
   statementVisitor_ = std::make_unique<StatementParseVisitor>(
       tokens, errorReporter, *expressionVisitor_);
 
+  // Create declaration visitor
   declarationVisitor_ = std::make_unique<DeclarationParseVisitor>(
       tokens, errorReporter, *expressionVisitor_, *statementVisitor_);
+
+  // Now set the declaration visitor on the statement visitor
+  statementVisitor_->setDeclarationVisitor(declarationVisitor_.get());
 }
 
+// Rest of the implementation remains the same
 bool BaseParseVisitor::visitParse() {
   try {
     bool hadError = false;
@@ -56,30 +63,24 @@ nodes::NodePtr BaseParseVisitor::parseStatement() {
 }
 
 bool BaseParseVisitor::isDeclarationStart() const {
-    // Check for storage class modifiers first
-    if (tokens_.check(tokens::TokenType::STACK) || 
-        tokens_.check(tokens::TokenType::HEAP) || 
-        tokens_.check(tokens::TokenType::STATIC) ||
-        tokens_.check(tokens::TokenType::ATTRIBUTE) ||
-        tokens_.check(tokens::TokenType::LET) ||
-        tokens_.check(tokens::TokenType::CONST) ||
-        tokens_.check(tokens::TokenType::FUNCTION) ||
-        tokens_.check(tokens::TokenType::CLASS)) {
-        return true;
-    }
-    return false;
+  return tokens_.check(tokens::TokenType::STACK) ||
+         tokens_.check(tokens::TokenType::HEAP) ||
+         tokens_.check(tokens::TokenType::STATIC) ||
+         tokens_.check(tokens::TokenType::ATTRIBUTE) ||
+         tokens_.check(tokens::TokenType::LET) ||
+         tokens_.check(tokens::TokenType::CONST) ||
+         tokens_.check(tokens::TokenType::FUNCTION) ||
+         tokens_.check(tokens::TokenType::CLASS);
 }
 
 void BaseParseVisitor::synchronize() {
   tokens_.advance();
 
   while (!tokens_.isAtEnd()) {
-    // Synchronize at statement boundaries
     if (tokens_.previous().getType() == tokens::TokenType::SEMICOLON) {
       return;
     }
 
-    // Or at the start of major declarations/statements
     switch (tokens_.peek().getType()) {
     case tokens::TokenType::CLASS:
     case tokens::TokenType::FUNCTION:
