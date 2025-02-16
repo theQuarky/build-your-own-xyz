@@ -26,6 +26,192 @@ private:
            std::to_string(loc.getColumn()) + ")";
   }
 
+  // Function declaration visitor
+  void visitFuncDecl(const nodes::FunctionDeclNode *node) {
+    indent();
+    std::cout << BLUE << "FunctionDecl" << RESET << " "
+              << getLocationString(node->getLocation()) << "\n";
+
+    indentLevel_++;
+
+    // Print function name
+    indent();
+    std::cout << "Name: '" << node->getName() << "'\n";
+
+    // Print modifiers and attributes
+    for (const auto &attr : node->getAttributes()) {
+      visitAttribute(attr.get());
+    }
+
+    // Print parameters
+    indent();
+    std::cout << "Parameters:\n";
+    indentLevel_++;
+    for (const auto &param : node->getParameters()) {
+      visitParameter(param.get());
+    }
+    indentLevel_--;
+
+    // Print return type
+    if (node->getReturnType()) {
+      indent();
+      std::cout << "Return Type:\n";
+      indentLevel_++;
+      visitType(node->getReturnType().get());
+      indentLevel_--;
+    }
+
+    // Print function body
+    if (node->getBody()) {
+      indent();
+      std::cout << "Body:\n";
+      indentLevel_++;
+      visitBlock(node->getBody().get());
+      indentLevel_--;
+    }
+
+    // Print async status
+    if (node->isAsync()) {
+      indent();
+      std::cout << "Async: true\n";
+    }
+
+    indentLevel_--;
+  }
+
+  // Parameter visitor
+  void visitParameter(const nodes::ParameterNode *node) {
+    indent();
+    std::cout << YELLOW << "Parameter" << RESET << " '" << node->getName()
+              << "' " << getLocationString(node->getLocation()) << "\n";
+
+    indentLevel_++;
+
+    // Print parameter type
+    if (node->getType()) {
+      indent();
+      std::cout << "Type:\n";
+      indentLevel_++;
+      visitType(node->getType().get());
+      indentLevel_--;
+    }
+
+    // Print modifiers
+    if (node->isRef()) {
+      indent();
+      std::cout << "Modifier: ref\n";
+    }
+    if (node->isConst()) {
+      indent();
+      std::cout << "Modifier: const\n";
+    }
+
+    // Print default value if present
+    if (node->getDefaultValue()) {
+      indent();
+      std::cout << "Default Value:\n";
+      indentLevel_++;
+      visitExpr(node->getDefaultValue().get());
+      indentLevel_--;
+    }
+
+    indentLevel_--;
+  }
+
+  // Block visitor
+  void visitBlock(const nodes::BlockNode *node) {
+    indent();
+    std::cout << "Block " << getLocationString(node->getLocation()) << "\n";
+
+    indentLevel_++;
+    for (const auto &stmt : node->getStatements()) {
+      visitStmt(stmt.get());
+    }
+    indentLevel_--;
+  }
+
+  // Statement visitor
+  void visitStmt(const nodes::StatementNode *stmt) {
+    if (!stmt) {
+      indent();
+      std::cout << RED << "null-statement" << RESET << "\n";
+      return;
+    }
+
+    if (auto exprStmt = dynamic_cast<const nodes::ExpressionStmtNode *>(stmt)) {
+      visitExprStmt(exprStmt);
+    } else if (auto returnStmt =
+                   dynamic_cast<const nodes::ReturnStmtNode *>(stmt)) {
+      visitReturnStmt(returnStmt);
+    } else if (auto ifStmt = dynamic_cast<const nodes::IfStmtNode *>(stmt)) {
+      visitIfStmt(ifStmt);
+    } else if (auto declStmt =
+                   dynamic_cast<const nodes::DeclarationStmtNode *>(stmt)) {
+      visitDeclStmt(declStmt);
+    } else {
+      indent();
+      std::cout << RED << "Unknown statement type" << RESET << "\n";
+    }
+  }
+
+  // Return statement visitor
+  void visitReturnStmt(const nodes::ReturnStmtNode *node) {
+    indent();
+    std::cout << "Return " << getLocationString(node->getLocation()) << "\n";
+
+    if (node->getValue()) {
+      indentLevel_++;
+      visitExpr(node->getValue().get());
+      indentLevel_--;
+    }
+  }
+
+  // If statement visitor
+  void visitIfStmt(const nodes::IfStmtNode *node) {
+    indent();
+    std::cout << "If " << getLocationString(node->getLocation()) << "\n";
+
+    indentLevel_++;
+
+    indent();
+    std::cout << "Condition:\n";
+    indentLevel_++;
+    visitExpr(node->getCondition().get());
+    indentLevel_--;
+
+    indent();
+    std::cout << "Then:\n";
+    indentLevel_++;
+    visitStmt(node->getThenBranch().get());
+    indentLevel_--;
+
+    if (node->getElseBranch()) {
+      indent();
+      std::cout << "Else:\n";
+      indentLevel_++;
+      visitStmt(node->getElseBranch().get());
+      indentLevel_--;
+    }
+
+    indentLevel_--;
+  }
+
+  // Declaration statement visitor
+  void visitDeclStmt(const nodes::DeclarationStmtNode *node) {
+    indent();
+    std::cout << "Declaration Statement "
+              << getLocationString(node->getLocation()) << "\n";
+
+    indentLevel_++;
+    if (auto varDecl = std::dynamic_pointer_cast<nodes::VarDeclNode>(
+            node->getDeclaration())) {
+      visitVarDecl(varDecl.get());
+    } else {
+      std::cout << RED << "Unknown declaration type" << RESET << "\n";
+    }
+    indentLevel_--;
+  }
+
   static std::string tokenTypeToString(tokens::TokenType type) {
     switch (type) {
     case tokens::TokenType::PLUS:
@@ -265,7 +451,11 @@ public:
     }
 
     for (const auto &node : nodes) {
-      if (auto varDecl = std::dynamic_pointer_cast<nodes::VarDeclNode>(node)) {
+      if (auto funcDecl =
+              std::dynamic_pointer_cast<nodes::FunctionDeclNode>(node)) {
+        visitFuncDecl(funcDecl.get());
+      } else if (auto varDecl =
+                     std::dynamic_pointer_cast<nodes::VarDeclNode>(node)) {
         visitVarDecl(varDecl.get());
       } else if (auto exprStmt =
                      std::dynamic_pointer_cast<nodes::ExpressionStmtNode>(
@@ -287,7 +477,11 @@ public:
       return;
     }
 
-    if (auto varDecl = std::dynamic_pointer_cast<nodes::VarDeclNode>(node)) {
+    if (auto funcDecl =
+            std::dynamic_pointer_cast<nodes::FunctionDeclNode>(node)) {
+      visitFuncDecl(funcDecl.get());
+    } else if (auto varDecl =
+                   std::dynamic_pointer_cast<nodes::VarDeclNode>(node)) {
       visitVarDecl(varDecl.get());
     } else if (auto expr =
                    std::dynamic_pointer_cast<nodes::ExpressionNode>(node)) {

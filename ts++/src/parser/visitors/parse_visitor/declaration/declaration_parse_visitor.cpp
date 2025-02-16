@@ -10,7 +10,7 @@ DeclarationParseVisitor::DeclarationParseVisitor(
     : tokens_(tokens), errorReporter_(errorReporter), exprVisitor_(exprVisitor),
       stmtVisitor_(stmtVisitor),
       varDeclVisitor_(tokens, errorReporter, exprVisitor, *this),
-      funcDeclVisitor_(tokens, errorReporter, *this, stmtVisitor),
+      funcDeclVisitor_(tokens, errorReporter, exprVisitor, *this, stmtVisitor),
       classDeclVisitor_(tokens, errorReporter, *this) {
   // assert(&tokens != nullptr && "Token stream cannot be null");
   // assert(&errorReporter != nullptr && "Error reporter cannot be null");
@@ -35,6 +35,20 @@ nodes::DeclPtr DeclarationParseVisitor::parseDeclaration() {
       if (auto attr = parseAttribute()) {
         attributes.push_back(std::move(attr));
       }
+    }
+
+    // Check for function declaration
+    if (check(tokens::TokenType::FUNCTION) || check(tokens::TokenType::ASYNC)) {
+      auto funcDecl = funcDeclVisitor_.parseFuncDecl();
+      if (!funcDecl)
+        return nullptr;
+
+      // Add any parsed attributes
+      for (auto &attr : attributes) {
+        funcDecl->addAttribute(std::move(attr));
+      }
+
+      return funcDecl;
     }
 
     // Parse the declaration keyword (let/const)
