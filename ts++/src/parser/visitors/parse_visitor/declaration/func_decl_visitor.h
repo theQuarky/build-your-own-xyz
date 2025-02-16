@@ -5,6 +5,9 @@
 #include "parser/visitors/parse_visitor/expression/iexpression_visitor.h"
 #include "parser/visitors/parse_visitor/statement/istatement_visitor.h"
 #include "tokens/stream/token_stream.h"
+#include <iostream>
+#include <iterator>
+#include <ostream>
 
 namespace visitors {
 
@@ -25,8 +28,7 @@ public:
   nodes::DeclPtr parseFuncDecl() {
     auto location = tokens_.peek().getLocation();
 
-    // Parse 'function' keyword - should already be consumed by the declaration
-    // visitor
+    // Parse 'function' keyword
     if (!match(tokens::TokenType::FUNCTION)) {
       error("Expected 'function' keyword");
       return nullptr;
@@ -40,12 +42,43 @@ public:
     auto name = tokens_.previous().getLexeme();
 
     // Parse parameter list
-    if (!match(tokens::TokenType::LEFT_PAREN)) {
-      error("Expected '(' after function name");
+    if (!consume(tokens::TokenType::LEFT_PAREN,
+                 "Expected '(' after function name")) {
       return nullptr;
     }
 
-    auto parameters = parseParameterList();
+    std::vector<nodes::ParamPtr> parameters;
+
+    // Parse parameters if there are any
+    if (!check(tokens::TokenType::RIGHT_PAREN)) {
+      // Parse first parameter
+      auto param = parseParameter();
+      if (!param)
+        return nullptr;
+      parameters.push_back(std::move(param));
+
+      // Parse additional parameters
+      std::cout << "current token: " << tokens_.getCurrentToken().getLexeme()
+                << std::endl;
+      while (match(tokens::TokenType::COMMA)) {
+        std::cout << "checkpoint a:" << std::endl;
+        if (check(tokens::TokenType::RIGHT_PAREN)) {
+          error("Expected parameter after ','");
+          return nullptr;
+        }
+        std::cout << "checkpoint b:" << std::endl;
+        param = parseParameter();
+        if (!param)
+          return nullptr;
+        std::cout << "checkpoint c:" << std::endl;
+        parameters.push_back(std::move(param));
+      }
+    }
+
+    if (!consume(tokens::TokenType::RIGHT_PAREN,
+                 "Expected ')' after parameters")) {
+      return nullptr;
+    }
 
     // Parse return type
     nodes::TypePtr returnType;
@@ -75,30 +108,6 @@ public:
   }
 
 private:
-  std::vector<nodes::ParamPtr> parseParameterList() {
-    std::vector<nodes::ParamPtr> parameters;
-
-    // Handle empty parameter list
-    if (match(tokens::TokenType::RIGHT_PAREN)) {
-      return parameters;
-    }
-
-    // Parse parameters
-    do {
-      auto param = parseParameter();
-      if (!param)
-        return parameters; // Error occurred
-      parameters.push_back(std::move(param));
-    } while (match(tokens::TokenType::COMMA));
-
-    if (!consume(tokens::TokenType::RIGHT_PAREN,
-                 "Expected ')' after parameters")) {
-      return parameters;
-    }
-
-    return parameters;
-  }
-
   nodes::ParamPtr parseParameter() {
     auto location = tokens_.peek().getLocation();
 
@@ -116,10 +125,11 @@ private:
     }
 
     auto type = declVisitor_.parseType();
-    if (!type)
+    if (!type) {
       return nullptr;
+    }
 
-    // Create parameter node without default value for now
+    // Create parameter node
     return std::make_shared<nodes::ParameterNode>(name, std::move(type),
                                                   nullptr, // default value
                                                   false,   // isRef
@@ -127,7 +137,6 @@ private:
                                                   location);
   }
 
-  // Utility methods
   bool match(tokens::TokenType type) {
     if (check(type)) {
       tokens_.advance();
