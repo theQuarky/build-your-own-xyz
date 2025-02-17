@@ -25,9 +25,12 @@ public:
         exprVisitor_(exprVisitor), declVisitor_(declVisitor),
         stmtVisitor_(stmtVisitor) {}
 
-  // Inside FunctionDeclarationVisitor class
-  nodes::DeclPtr parseFuncDecl() {
+  nodes::DeclPtr
+  parseFuncDecl(const std::vector<tokens::TokenType> &initialModifiers = {}) {
     auto location = tokens_.peek().getLocation();
+
+    // Use the modifiers passed from DeclarationParseVisitor
+    std::vector<tokens::TokenType> modifiers = initialModifiers;
 
     // Parse 'function' keyword
     if (!match(tokens::TokenType::FUNCTION)) {
@@ -35,7 +38,7 @@ public:
       return nullptr;
     }
 
-    // Parse function name
+    // Parse function name and generic parameters
     if (!match(tokens::TokenType::IDENTIFIER)) {
       error("Expected function name");
       return nullptr;
@@ -86,16 +89,14 @@ public:
     nodes::TypePtr returnType;
     if (match(tokens::TokenType::COLON)) {
       returnType = declVisitor_.parseType();
-      if (!returnType) {
+      if (!returnType)
         return nullptr;
-      }
     }
 
     // Parse where clause if present
     std::vector<std::pair<std::string, nodes::TypePtr>> constraints;
     if (match(tokens::TokenType::WHERE)) {
       do {
-        // Parse constraint
         if (!match(tokens::TokenType::IDENTIFIER)) {
           error("Expected type parameter name in constraint");
           return nullptr;
@@ -108,11 +109,21 @@ public:
         }
 
         auto constraintType = declVisitor_.parseType();
-        if (!constraintType) {
+        if (!constraintType)
           return nullptr;
-        }
 
         constraints.emplace_back(paramName, std::move(constraintType));
+      } while (match(tokens::TokenType::COMMA));
+    }
+
+    // Parse throws clause
+    std::vector<nodes::TypePtr> throwsTypes;
+    if (match(tokens::TokenType::THROWS)) {
+      do {
+        auto throwType = declVisitor_.parseType();
+        if (!throwType)
+          return nullptr;
+        throwsTypes.push_back(std::move(throwType));
       } while (match(tokens::TokenType::COMMA));
     }
 
@@ -123,20 +134,21 @@ public:
     }
 
     auto body = stmtVisitor_.parseBlock();
-    if (!body) {
+    if (!body)
       return nullptr;
-    }
 
     // Create appropriate node based on whether it's generic
     if (!genericParams.empty()) {
       return std::make_shared<nodes::GenericFunctionDeclNode>(
           name, std::move(genericParams), std::move(parameters),
-          std::move(returnType), std::move(constraints), std::move(body),
+          std::move(returnType), std::move(constraints), std::move(throwsTypes),
+          std::move(modifiers), std::move(body),
           false, // isAsync
           location);
     } else {
       return std::make_shared<nodes::FunctionDeclNode>(
-          name, std::move(parameters), std::move(returnType), std::move(body),
+          name, std::move(parameters), std::move(returnType),
+          std::move(throwsTypes), std::move(modifiers), std::move(body),
           false, // isAsync
           location);
     }

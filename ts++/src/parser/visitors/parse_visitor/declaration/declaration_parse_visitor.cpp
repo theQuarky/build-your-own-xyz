@@ -1,6 +1,8 @@
 #include "declaration_parse_visitor.h"
 #include "parser/visitors/parse_visitor/expression/iexpression_visitor.h"
 #include <cassert>
+#include <iostream>
+#include <ostream>
 
 namespace visitors {
 
@@ -28,26 +30,15 @@ nodes::DeclPtr DeclarationParseVisitor::parseDeclaration() {
       tokens_.advance();
     }
 
-    // Parse attributes and modifiers (#inline, etc.)
-    std::vector<nodes::AttributePtr> attributes;
-    while (check(tokens::TokenType::INLINE) ||
-           check(tokens::TokenType::ATTRIBUTE)) {
-      if (auto attr = parseAttribute()) {
-        attributes.push_back(std::move(attr));
-      }
-    }
+    // Parse function modifiers
+    std::vector<tokens::TokenType> modifiers;
+    parseFunctionModifiers(modifiers);
 
     // Check for function declaration
     if (check(tokens::TokenType::FUNCTION) || check(tokens::TokenType::ASYNC)) {
-      auto funcDecl = funcDeclVisitor_.parseFuncDecl();
+      auto funcDecl = funcDeclVisitor_.parseFuncDecl(modifiers);
       if (!funcDecl)
         return nullptr;
-
-      // Add any parsed attributes
-      for (auto &attr : attributes) {
-        funcDecl->addAttribute(std::move(attr));
-      }
-
       return funcDecl;
     }
 
@@ -86,16 +77,9 @@ nodes::DeclPtr DeclarationParseVisitor::parseDeclaration() {
         return nullptr;
       }
 
-      // Create variable declaration node
-      auto result = std::make_shared<nodes::VarDeclNode>(
+      // Create variable declaration with storage class
+      return std::make_shared<nodes::VarDeclNode>(
           name, type, initializer, storageClass, isConst, location);
-
-      // Add all parsed attributes
-      for (auto &attr : attributes) {
-        result->addAttribute(std::move(attr));
-      }
-
-      return result;
     }
 
     error("Expected declaration");
@@ -104,6 +88,26 @@ nodes::DeclPtr DeclarationParseVisitor::parseDeclaration() {
     error(std::string("Error parsing declaration: ") + e.what());
     return nullptr;
   }
+}
+
+bool DeclarationParseVisitor::parseFunctionModifiers(
+    std::vector<tokens::TokenType> &modifiers) {
+  while (true) {
+    auto token = tokens_.peek();
+    tokens::TokenType type = token.getType();
+
+    // Check for function modifiers tokens directly
+    if (type == tokens::TokenType::INLINE ||
+        type == tokens::TokenType::VIRTUAL ||
+        type == tokens::TokenType::UNSAFE || type == tokens::TokenType::SIMD ||
+        tokens::isFunctionModifier(type)) {
+      modifiers.push_back(type);
+      tokens_.advance();
+    } else {
+      break;
+    }
+  }
+  return true;
 }
 
 nodes::TypePtr DeclarationParseVisitor::parseType() {
@@ -359,6 +363,7 @@ std::vector<nodes::AttributePtr> DeclarationParseVisitor::parseAttributeList() {
   }
   return attributes;
 }
+
 nodes::AttributePtr DeclarationParseVisitor::parseAttribute() {
   auto location = tokens_.previous().getLocation();
   std::string lexeme = tokens_.previous().getLexeme();

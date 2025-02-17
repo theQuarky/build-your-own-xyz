@@ -105,14 +105,22 @@ class FunctionDeclNode : public DeclarationNode {
 public:
   FunctionDeclNode(const std::string &name, std::vector<ParamPtr> params,
                    TypePtr returnType,
-                   BlockPtr body, // Can be nullptr for declarations
-                   bool isAsync, const core::SourceLocation &loc)
+                   std::vector<TypePtr> throwsTypes,         // Add throws types
+                   std::vector<tokens::TokenType> modifiers, // Add modifiers
+                   BlockPtr body, bool isAsync, const core::SourceLocation &loc)
       : DeclarationNode(name, loc), parameters_(std::move(params)),
-        returnType_(std::move(returnType)), body_(std::move(body)),
-        isAsync_(isAsync) {}
+        returnType_(std::move(returnType)),
+        throwsTypes_(std::move(throwsTypes)), modifiers_(std::move(modifiers)),
+        body_(std::move(body)), isAsync_(isAsync) {}
 
   const std::vector<ParamPtr> &getParameters() const { return parameters_; }
   TypePtr getReturnType() const { return returnType_; }
+  const std::vector<TypePtr> &getThrowsTypes() const {
+    return throwsTypes_;
+  } // Add getter
+  const std::vector<tokens::TokenType> &getModifiers() const {
+    return modifiers_;
+  }
   BlockPtr getBody() const { return body_; }
   bool isAsync() const { return isAsync_; }
 
@@ -121,10 +129,12 @@ public:
   }
 
 private:
-  std::vector<ParamPtr> parameters_; // Function parameters
-  TypePtr returnType_;               // Return type (can be nullptr for void)
-  BlockPtr body_; // Function body (can be nullptr for declarations)
-  bool isAsync_;  // Whether function is async
+  std::vector<ParamPtr> parameters_;
+  TypePtr returnType_;
+  std::vector<TypePtr> throwsTypes_;         // Add throws types member
+  std::vector<tokens::TokenType> modifiers_; // Store function modifiers
+  BlockPtr body_;
+  bool isAsync_;
 };
 
 /**
@@ -135,10 +145,13 @@ public:
   GenericFunctionDeclNode(
       const std::string &name, std::vector<TypePtr> genericParams,
       std::vector<ParamPtr> params, TypePtr returnType,
-      std::vector<std::pair<std::string, TypePtr>> constraints, BlockPtr body,
-      bool isAsync, const core::SourceLocation &loc)
+      std::vector<std::pair<std::string, TypePtr>> constraints,
+      std::vector<TypePtr> throwsTypes,         // Add throws types
+      std::vector<tokens::TokenType> modifiers, // Add modifiers
+      BlockPtr body, bool isAsync, const core::SourceLocation &loc)
       : FunctionDeclNode(name, std::move(params), std::move(returnType),
-                         std::move(body), isAsync, loc),
+                         std::move(throwsTypes), // Pass throws types to base
+                         std::move(modifiers), std::move(body), isAsync, loc),
         genericParams_(std::move(genericParams)),
         constraints_(std::move(constraints)) {}
 
@@ -154,10 +167,8 @@ public:
   }
 
 private:
-  std::vector<TypePtr>
-      genericParams_; // The generic type parameters (T, U, etc)
-  std::vector<std::pair<std::string, TypePtr>>
-      constraints_; // The where constraints
+  std::vector<TypePtr> genericParams_;
+  std::vector<std::pair<std::string, TypePtr>> constraints_;
 };
 
 // Forward declarations for declaration visitors

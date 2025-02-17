@@ -3,6 +3,7 @@
 #include "parser/nodes/expression_nodes.h"
 #include "parser/visitors/parse_visitor/expression/iexpression_visitor.h"
 #include "tokens/stream/token_stream.h"
+#include "tokens/token_type.h"
 
 namespace visitors {
 
@@ -68,6 +69,10 @@ private:
     case tokens::TokenType::STACK:
     case tokens::TokenType::HEAP:
     case tokens::TokenType::STATIC:
+    case tokens::TokenType::INLINE:
+    case tokens::TokenType::VIRTUAL:
+    case tokens::TokenType::UNSAFE:
+    case tokens::TokenType::SIMD:
       return true;
     default:
       return false;

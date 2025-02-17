@@ -34,6 +34,19 @@ private:
 
     indentLevel_++;
 
+    // Print modifiers - Add this section
+    const auto &modifiers = node->getModifiers();
+    if (!modifiers.empty()) {
+      indent();
+      std::cout << "Modifiers:\n";
+      indentLevel_++;
+      for (const auto &modifier : modifiers) {
+        indent();
+        std::cout << modifierToString(modifier) << "\n";
+      }
+      indentLevel_--;
+    }
+
     // Print function name
     indent();
     std::cout << "Name: '" << node->getName() << "'\n";
@@ -82,6 +95,17 @@ private:
       std::cout << "Return Type:\n";
       indentLevel_++;
       visitType(node->getReturnType().get());
+      indentLevel_--;
+    }
+
+    if (!node->getThrowsTypes().empty()) {
+      indent();
+      std::cout << "Throws:\n";
+      indentLevel_++;
+      for (const auto &throwType : node->getThrowsTypes()) {
+        indent();
+        visitType(throwType.get());
+      }
       indentLevel_--;
     }
 
@@ -462,6 +486,21 @@ private:
       indentLevel_--;
     }
     indentLevel_--;
+  }
+
+  std::string modifierToString(tokens::TokenType modifier) {
+    switch (modifier) {
+    case tokens::TokenType::INLINE:
+      return "#inline";
+    case tokens::TokenType::VIRTUAL:
+      return "#virtual";
+    case tokens::TokenType::UNSAFE:
+      return "#unsafe";
+    case tokens::TokenType::SIMD:
+      return "#simd";
+    default:
+      return "unknown";
+    }
   }
 
 public:

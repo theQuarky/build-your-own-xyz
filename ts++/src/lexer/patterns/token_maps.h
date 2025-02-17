@@ -173,6 +173,8 @@ public:
       return "Declaration";
     } else if (isType(type)) {
       return "Type";
+    } else if (isGeneric(type)) {
+      return "Generic";
     }
 
     return "Unknown";
@@ -188,7 +190,10 @@ private:
     return type >= tokens::TokenType::TYPE_BEGIN &&
            type <= tokens::TokenType::TYPE_END;
   }
-
+  static bool isGeneric(tokens::TokenType type) {
+    return type >= tokens::TokenType::GENERIC_BEGIN &&
+           type <= tokens::TokenType::GENERIC_END;
+  }
   static bool isAccessModifier(tokens::TokenType type) {
     return type >= tokens::TokenType::ACCESS_BEGIN &&
            type <= tokens::TokenType::ACCESS_END;

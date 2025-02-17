@@ -44,7 +44,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Print tokens if you want to see the lexer output
-    printTokenStream(tokens);  
+    printTokenStream(tokens);
 
     // Parsing
     parser::Parser parser(std::move(tokens), errorReporter);
