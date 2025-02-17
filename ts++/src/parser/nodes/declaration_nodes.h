@@ -127,6 +127,39 @@ private:
   bool isAsync_;  // Whether function is async
 };
 
+/**
+ * Generic Function declaration node
+ */
+class GenericFunctionDeclNode : public FunctionDeclNode {
+public:
+  GenericFunctionDeclNode(
+      const std::string &name, std::vector<TypePtr> genericParams,
+      std::vector<ParamPtr> params, TypePtr returnType,
+      std::vector<std::pair<std::string, TypePtr>> constraints, BlockPtr body,
+      bool isAsync, const core::SourceLocation &loc)
+      : FunctionDeclNode(name, std::move(params), std::move(returnType),
+                         std::move(body), isAsync, loc),
+        genericParams_(std::move(genericParams)),
+        constraints_(std::move(constraints)) {}
+
+  const std::vector<TypePtr> &getGenericParams() const {
+    return genericParams_;
+  }
+  const std::vector<std::pair<std::string, TypePtr>> &getConstraints() const {
+    return constraints_;
+  }
+
+  bool accept(interface::BaseInterface *visitor) override {
+    return visitor->visitParse();
+  }
+
+private:
+  std::vector<TypePtr>
+      genericParams_; // The generic type parameters (T, U, etc)
+  std::vector<std::pair<std::string, TypePtr>>
+      constraints_; // The where constraints
+};
+
 // Forward declarations for declaration visitors
 class DeclVisitor {
 public:

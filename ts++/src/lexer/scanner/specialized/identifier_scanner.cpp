@@ -57,7 +57,9 @@ const std::unordered_map<std::string, tokens::TokenType> &getKeywordMapImpl() {
       {"throw", tokens::TokenType::THROW},
       {"typeof", tokens::TokenType::TYPEOF},
       {"unsafe", tokens::TokenType::UNSAFE},
-      {"aligned", tokens::TokenType::ALIGNED}};
+      {"aligned", tokens::TokenType::ALIGNED},
+      {"ref", tokens::TokenType::REF},
+      {"where", tokens::TokenType::WHERE}};
   return keywords;
 }
 } // namespace

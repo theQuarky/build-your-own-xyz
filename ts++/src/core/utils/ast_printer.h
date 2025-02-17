@@ -38,12 +38,36 @@ private:
     indent();
     std::cout << "Name: '" << node->getName() << "'\n";
 
-    // Print modifiers and attributes
-    for (const auto &attr : node->getAttributes()) {
-      visitAttribute(attr.get());
+    // Print generic parameters and constraints if this is a generic function
+    if (auto genericFunc =
+            dynamic_cast<const nodes::GenericFunctionDeclNode *>(node)) {
+      // Print generic type parameters
+      if (!genericFunc->getGenericParams().empty()) {
+        indent();
+        std::cout << "Generic Parameters:\n";
+        indentLevel_++;
+        for (const auto &param : genericFunc->getGenericParams()) {
+          indent();
+          std::cout << param->toString() << "\n";
+        }
+        indentLevel_--;
+      }
+
+      // Print where constraints
+      if (!genericFunc->getConstraints().empty()) {
+        indent();
+        std::cout << "Constraints:\n";
+        indentLevel_++;
+        for (const auto &[paramName, constraint] :
+             genericFunc->getConstraints()) {
+          indent();
+          std::cout << paramName << ": " << constraint->toString() << "\n";
+        }
+        indentLevel_--;
+      }
     }
 
-    // Print parameters
+    // Print function parameters
     indent();
     std::cout << "Parameters:\n";
     indentLevel_++;
@@ -477,8 +501,11 @@ public:
       return;
     }
 
-    if (auto funcDecl =
-            std::dynamic_pointer_cast<nodes::FunctionDeclNode>(node)) {
+    if (auto genericFunc =
+            std::dynamic_pointer_cast<nodes::GenericFunctionDeclNode>(node)) {
+      visitFuncDecl(genericFunc.get());
+    } else if (auto funcDecl =
+                   std::dynamic_pointer_cast<nodes::FunctionDeclNode>(node)) {
       visitFuncDecl(funcDecl.get());
     } else if (auto varDecl =
                    std::dynamic_pointer_cast<nodes::VarDeclNode>(node)) {
