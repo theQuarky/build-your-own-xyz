@@ -28,7 +28,7 @@ private:
   bool check(tokens::TokenType type) const;
   void error(const std::string &message);
   bool consume(tokens::TokenType type, const std::string &message);
-  
+
   // Resources
   tokens::TokenStream &tokens_;
   core::ErrorReporter &errorReporter_;
@@ -53,5 +53,6 @@ private:
                                 const core::SourceLocation &location);
   nodes::TypePtr parsePointerType(nodes::TypePtr baseType,
                                   const core::SourceLocation &location);
+  bool parseFunctionModifiers(std::vector<tokens::TokenType> &modifiers);
 };
 } // namespace visitors

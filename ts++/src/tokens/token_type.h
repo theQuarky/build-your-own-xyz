@@ -32,19 +32,6 @@ enum class TokenType {
   GENERIC_END = THROWS,
 
   /*****************************************************************************
-   * Storage and Memory Modifiers
-   *****************************************************************************/
-  STORAGE_BEGIN,
-  STACK = STORAGE_BEGIN, // '#stack' storage modifier
-  HEAP,                  // '#heap' storage modifier
-  STATIC,                // '#static' storage modifier
-  SHARED,                // '#shared' smart pointer type
-  UNIQUE,                // '#unique' smart pointer type
-  WEAK,                  // '#weak' smart pointer type
-  ATTRIBUTE,             // '#'
-  STORAGE_END = ATTRIBUTE,
-
-  /*****************************************************************************
    * Access Modifiers
    *****************************************************************************/
   ACCESS_BEGIN,
@@ -87,11 +74,24 @@ enum class TokenType {
   TYPE_END = STRING,
 
   /*****************************************************************************
+   * Storage and Memory Modifiers
+   *****************************************************************************/
+  STORAGE_BEGIN,
+  STACK = STORAGE_BEGIN, // '#stack' storage modifier
+  HEAP,                  // '#heap' storage modifier
+  STATIC,                // '#static' storage modifier
+  SHARED,                // '#shared' smart pointer type
+  UNIQUE,                // '#unique' smart pointer type
+  WEAK,                  // '#weak' smart pointer type
+  ATTRIBUTE,             // '#'
+  STORAGE_END = ATTRIBUTE,
+
+  /*****************************************************************************
    * Function and Method Modifiers
    *****************************************************************************/
   FUNC_MOD_BEGIN,
   INLINE = FUNC_MOD_BEGIN, // '#inline' function modifier
-  VIRTUAL,                 // '#virtual' function modifier
+  VIRTUAL,                 // '#virtual' function modifier - moved here
   UNSAFE,                  // '#unsafe' function modifier
   SIMD,                    // '#simd' function modifier
   TARGET,                  // '#target' platform specific code
@@ -152,8 +152,8 @@ enum class TokenType {
   PIPE,        // '|'
   CARET,       // '^'
   TILDE,       // '~'
-  RIGHT_SHIFT, // >>
-  LEFT_SHIFT,  // <<
+  RIGHT_SHIFT, // '>>'
+  LEFT_SHIFT,  // '<<'
 
   // Logical
   EXCLAIM,             // '!'

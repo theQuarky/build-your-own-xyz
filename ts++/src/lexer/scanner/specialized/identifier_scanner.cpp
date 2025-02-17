@@ -59,7 +59,14 @@ const std::unordered_map<std::string, tokens::TokenType> &getKeywordMapImpl() {
       {"unsafe", tokens::TokenType::UNSAFE},
       {"aligned", tokens::TokenType::ALIGNED},
       {"ref", tokens::TokenType::REF},
-      {"where", tokens::TokenType::WHERE}};
+      {"where", tokens::TokenType::WHERE},
+      {"throws", tokens::TokenType::THROWS},
+      {"#inline", tokens::TokenType::INLINE},
+      {"#virtual", tokens::TokenType::VIRTUAL},
+      {"#unsafe", tokens::TokenType::UNSAFE},
+      {"#simd", tokens::TokenType::SIMD},
+      {"#target", tokens::TokenType::TARGET},
+  };
   return keywords;
 }
 } // namespace
@@ -127,6 +134,8 @@ tokens::Token IdentifierScanner::scanAttribute() {
   size_t length = state_->getPosition() - nameStart;
   std::string_view attrName(data, length);
 
+  // "#inline" | "#virtual" | "#unsafe" | "#simd"
+  //                 | "#const" | "#target"
   // Map attribute to token type
   tokens::TokenType type;
   if (attrName == "stack")
@@ -143,7 +152,17 @@ tokens::Token IdentifierScanner::scanAttribute() {
     type = tokens::TokenType::WEAK;
   else if (attrName == "inline")
     type = tokens::TokenType::INLINE;
-  else if (attrName == "aligned") {
+  else if (attrName == "virtual") {
+    type = tokens::TokenType::VIRTUAL;
+  } else if (attrName == "unsafe") {
+    type = tokens::TokenType::UNSAFE;
+  } else if (attrName == "simd") {
+    type = tokens::TokenType::SIMD;
+  } else if (attrName == "const") {
+    type = tokens::TokenType::CONST;
+  } else if (attrName == "target") {
+    type = tokens::TokenType::TARGET;
+  } else if (attrName == "aligned") {
     type = tokens::TokenType::ALIGNED;
     // Return just the 'aligned' token, let the parser handle the parentheses
     // and number
