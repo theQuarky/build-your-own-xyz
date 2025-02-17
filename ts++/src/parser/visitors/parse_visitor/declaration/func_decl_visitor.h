@@ -25,6 +25,7 @@ public:
         exprVisitor_(exprVisitor), declVisitor_(declVisitor),
         stmtVisitor_(stmtVisitor) {}
 
+  // Inside FunctionDeclarationVisitor class
   nodes::DeclPtr parseFuncDecl() {
     auto location = tokens_.peek().getLocation();
 
@@ -41,38 +42,39 @@ public:
     }
     auto name = tokens_.previous().getLexeme();
 
-    // Parse parameter list
+    // Parse generic parameters if present
+    std::vector<nodes::TypePtr> genericParams;
+    if (match(tokens::TokenType::LESS)) {
+      do {
+        if (!match(tokens::TokenType::IDENTIFIER)) {
+          error("Expected generic parameter name");
+          return nullptr;
+        }
+        auto paramName = tokens_.previous().getLexeme();
+        genericParams.push_back(std::make_shared<nodes::NamedTypeNode>(
+            paramName, tokens_.previous().getLocation()));
+      } while (match(tokens::TokenType::COMMA));
+
+      if (!consume(tokens::TokenType::GREATER,
+                   "Expected '>' after generic parameters")) {
+        return nullptr;
+      }
+    }
+
+    // Parse regular parameters
     if (!consume(tokens::TokenType::LEFT_PAREN,
                  "Expected '(' after function name")) {
       return nullptr;
     }
 
     std::vector<nodes::ParamPtr> parameters;
-
-    // Parse parameters if there are any
     if (!check(tokens::TokenType::RIGHT_PAREN)) {
-      // Parse first parameter
-      auto param = parseParameter();
-      if (!param)
-        return nullptr;
-      parameters.push_back(std::move(param));
-
-      // Parse additional parameters
-      std::cout << "current token: " << tokens_.getCurrentToken().getLexeme()
-                << std::endl;
-      while (match(tokens::TokenType::COMMA)) {
-        std::cout << "checkpoint a:" << std::endl;
-        if (check(tokens::TokenType::RIGHT_PAREN)) {
-          error("Expected parameter after ','");
-          return nullptr;
-        }
-        std::cout << "checkpoint b:" << std::endl;
-        param = parseParameter();
+      do {
+        auto param = parseParameter();
         if (!param)
           return nullptr;
-        std::cout << "checkpoint c:" << std::endl;
         parameters.push_back(std::move(param));
-      }
+      } while (match(tokens::TokenType::COMMA));
     }
 
     if (!consume(tokens::TokenType::RIGHT_PAREN,
@@ -89,6 +91,31 @@ public:
       }
     }
 
+    // Parse where clause if present
+    std::vector<std::pair<std::string, nodes::TypePtr>> constraints;
+    if (match(tokens::TokenType::WHERE)) {
+      do {
+        // Parse constraint
+        if (!match(tokens::TokenType::IDENTIFIER)) {
+          error("Expected type parameter name in constraint");
+          return nullptr;
+        }
+        auto paramName = tokens_.previous().getLexeme();
+
+        if (!consume(tokens::TokenType::COLON,
+                     "Expected ':' after type parameter")) {
+          return nullptr;
+        }
+
+        auto constraintType = declVisitor_.parseType();
+        if (!constraintType) {
+          return nullptr;
+        }
+
+        constraints.emplace_back(paramName, std::move(constraintType));
+      } while (match(tokens::TokenType::COMMA));
+    }
+
     // Parse function body
     if (!match(tokens::TokenType::LEFT_BRACE)) {
       error("Expected '{' before function body");
@@ -100,16 +127,37 @@ public:
       return nullptr;
     }
 
-    // Create and return function declaration node
-    return std::make_shared<nodes::FunctionDeclNode>(
-        name, std::move(parameters), std::move(returnType), std::move(body),
-        false, // isAsync
-        location);
+    // Create appropriate node based on whether it's generic
+    if (!genericParams.empty()) {
+      return std::make_shared<nodes::GenericFunctionDeclNode>(
+          name, std::move(genericParams), std::move(parameters),
+          std::move(returnType), std::move(constraints), std::move(body),
+          false, // isAsync
+          location);
+    } else {
+      return std::make_shared<nodes::FunctionDeclNode>(
+          name, std::move(parameters), std::move(returnType), std::move(body),
+          false, // isAsync
+          location);
+    }
   }
 
 private:
   nodes::ParamPtr parseParameter() {
     auto location = tokens_.peek().getLocation();
+
+    // Parse parameter modifiers (ref/const)
+    bool isRef = false;
+    bool isConst = false;
+
+    // Check for ref modifier
+    if (match(tokens::TokenType::REF)) {
+      isRef = true;
+    }
+    // You can add const parsing here later if needed
+    else if (match(tokens::TokenType::CONST)) {
+      isConst = true;
+    }
 
     // Parse parameter name
     if (!match(tokens::TokenType::IDENTIFIER)) {
@@ -129,12 +177,24 @@ private:
       return nullptr;
     }
 
-    // Create parameter node
-    return std::make_shared<nodes::ParameterNode>(name, std::move(type),
-                                                  nullptr, // default value
-                                                  false,   // isRef
-                                                  false,   // isConst
-                                                  location);
+    // Parse optional default value
+    nodes::ExpressionPtr defaultValue = nullptr;
+    if (match(tokens::TokenType::EQUALS)) {
+      // Note: ref parameters typically don't have default values
+      // but we'll allow it for flexibility
+      defaultValue = exprVisitor_.parseExpression();
+      if (!defaultValue) {
+        error("Invalid default value expression");
+        return nullptr;
+      }
+    }
+
+    // Create parameter node with ref/const flags
+    return std::make_shared<nodes::ParameterNode>(
+        name, std::move(type), std::move(defaultValue),
+        isRef,   // Now passing the ref flag
+        isConst, // Now passing the const flag
+        location);
   }
 
   bool match(tokens::TokenType type) {
