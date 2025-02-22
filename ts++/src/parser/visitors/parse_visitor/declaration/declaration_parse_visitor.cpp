@@ -13,7 +13,7 @@ DeclarationParseVisitor::DeclarationParseVisitor(
       stmtVisitor_(stmtVisitor),
       varDeclVisitor_(tokens, errorReporter, exprVisitor, *this),
       funcDeclVisitor_(tokens, errorReporter, exprVisitor, *this, stmtVisitor),
-      classDeclVisitor_(tokens, errorReporter, *this) {
+      classDeclVisitor_(tokens, errorReporter, *this, exprVisitor, stmtVisitor) {
   // assert(&tokens != nullptr && "Token stream cannot be null");
   // assert(&errorReporter != nullptr && "Error reporter cannot be null");
 }
@@ -40,6 +40,15 @@ nodes::DeclPtr DeclarationParseVisitor::parseDeclaration() {
       if (!funcDecl)
         return nullptr;
       return funcDecl;
+    }
+    std::vector<tokens::TokenType> classModifiers;
+    parseFunctionModifiers(classModifiers);
+
+    if (check(tokens::TokenType::CLASS)) {
+      auto classDecl = classDeclVisitor_.parseClassDecl(classModifiers);
+      if (!classDecl)
+        return nullptr;
+      return classDecl;
     }
 
     // Parse the declaration keyword (let/const)
@@ -101,6 +110,25 @@ bool DeclarationParseVisitor::parseFunctionModifiers(
         type == tokens::TokenType::VIRTUAL ||
         type == tokens::TokenType::UNSAFE || type == tokens::TokenType::SIMD ||
         tokens::isFunctionModifier(type)) {
+      modifiers.push_back(type);
+      tokens_.advance();
+    } else {
+      break;
+    }
+  }
+  return true;
+}
+
+bool DeclarationParseVisitor::parseClassModifiers(
+    std::vector<tokens::TokenType> &modifiers) {
+  while (true) {
+    auto token = tokens_.peek();
+    tokens::TokenType type = token.getType();
+
+    // Check for function modifiers tokens directly
+    if (type == tokens::TokenType::ALIGNED ||
+        type == tokens::TokenType::PACKED ||
+        type == tokens::TokenType::ABSTRACT) {
       modifiers.push_back(type);
       tokens_.advance();
     } else {

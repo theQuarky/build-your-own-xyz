@@ -1,4 +1,7 @@
-// Testing interface and class
-interface Shape {
-    area(): float;
+class Rectangle {
+    public let width: int;
+    public let height: int;
+
+    constructor() {
+    }
 }

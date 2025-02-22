@@ -75,24 +75,26 @@ public:
     }
   }
 
-  nodes::BlockPtr parseBlock() override {
+bool noTraverseClosingBrace = false;  // Add parameter to control stopping at }
+nodes::BlockPtr parseBlock(bool noTraverseClosingBrace = false) override {
     auto location = tokens_.previous().getLocation();
     std::vector<nodes::StmtPtr> statements;
 
     while (!check(tokens::TokenType::RIGHT_BRACE) && !tokens_.isAtEnd()) {
-      if (auto stmt = parseStatement()) {
-        statements.push_back(std::move(stmt));
-      } else {
-        synchronize();
-      }
-    }
-
-    if (!consume(tokens::TokenType::RIGHT_BRACE, "Expected '}' after block")) {
-      return nullptr;
+        auto oldPos = tokens_.peek().getLocation();
+        if (auto stmt = parseStatement()) {
+            statements.push_back(std::move(stmt));
+        } else {
+            if (oldPos == tokens_.peek().getLocation()) {
+                // If we didn't advance, force advance to avoid infinite loop
+                tokens_.advance();
+            }
+            synchronize();
+        }
     }
 
     return std::make_shared<nodes::BlockNode>(std::move(statements), location);
-  }
+}
 
 private:
   nodes::StmtPtr parseDeclarationStatement() {

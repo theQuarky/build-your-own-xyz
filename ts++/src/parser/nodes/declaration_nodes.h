@@ -6,6 +6,7 @@
 #pragma once
 #include "base_node.h"
 #include "expression_nodes.h"
+#include "tokens/token_type.h"
 #include "type_nodes.h"
 #include <memory>
 #include <vector>
@@ -169,6 +170,157 @@ public:
 private:
   std::vector<TypePtr> genericParams_;
   std::vector<std::pair<std::string, TypePtr>> constraints_;
+};
+
+/**
+ * Class declaration node
+ */
+class ClassDeclNode : public DeclarationNode {
+public:
+  ClassDeclNode(const std::string &name,
+                std::vector<tokens::TokenType> classModifiers,
+                TypePtr baseClass, std::vector<TypePtr> interfaces,
+                std::vector<DeclPtr> members, const core::SourceLocation &loc)
+      : DeclarationNode(name, loc), classModifiers_(std::move(classModifiers)),
+        baseClass_(std::move(baseClass)), interfaces_(std::move(interfaces)),
+        members_(std::move(members)) {}
+
+  const std::vector<tokens::TokenType> &getClassModifiers() const {
+    return classModifiers_;
+  }
+  TypePtr getBaseClass() const { return baseClass_; }
+  const std::vector<TypePtr> &getInterfaces() const { return interfaces_; }
+  const std::vector<DeclPtr> &getMembers() const { return members_; }
+
+  bool accept(interface::BaseInterface *visitor) override {
+    return visitor->visitParse();
+  }
+
+private:
+  std::vector<tokens::TokenType>
+      classModifiers_;              // #aligned, #packed, #abstract
+  TypePtr baseClass_;               // Base class (can be nullptr)
+  std::vector<TypePtr> interfaces_; // Implemented interfaces
+  std::vector<DeclPtr> members_;    // Class members
+};
+
+class ConstructorDeclNode : public DeclarationNode {
+public:
+  ConstructorDeclNode(tokens::TokenType accessModifier,
+                      std::vector<ParamPtr> parameters, BlockPtr body,
+                      const core::SourceLocation &loc)
+      : DeclarationNode("constructor", loc), accessModifier_(accessModifier),
+        parameters_(std::move(parameters)), body_(std::move(body)) {}
+
+  tokens::TokenType getAccessModifier() const { return accessModifier_; }
+  const std::vector<ParamPtr> &getParameters() const { return parameters_; }
+  BlockPtr getBody() const { return body_; }
+
+  bool accept(interface::BaseInterface *visitor) override {
+    // You might implement a specific visit method, e.g.
+    // visitor->visitConstructor(this)
+    return visitor->visitParse();
+  }
+
+private:
+  tokens::TokenType accessModifier_; // e.g. PUBLIC, PRIVATE, PROTECTED
+  std::vector<ParamPtr> parameters_; // List of parameters
+  BlockPtr body_;                    // The constructor body (block)
+};
+
+class MethodDeclNode : public DeclarationNode {
+public:
+  MethodDeclNode(const std::string &methodName,
+                 tokens::TokenType accessModifier,
+                 std::vector<ParamPtr> parameters, TypePtr returnType,
+                 std::vector<TypePtr> throwsTypes,
+                 std::vector<tokens::TokenType> modifiers, BlockPtr body,
+                 const core::SourceLocation &loc)
+      : DeclarationNode(methodName, loc), accessModifier_(accessModifier),
+        parameters_(std::move(parameters)), returnType_(std::move(returnType)),
+        throwsTypes_(std::move(throwsTypes)), modifiers_(std::move(modifiers)),
+        body_(std::move(body)) {}
+
+  tokens::TokenType getAccessModifier() const { return accessModifier_; }
+  const std::vector<ParamPtr> &getParameters() const { return parameters_; }
+  TypePtr getReturnType() const { return returnType_; }
+  const std::vector<TypePtr> &getThrowsTypes() const { return throwsTypes_; }
+  const std::vector<tokens::TokenType> &getModifiers() const {
+    return modifiers_;
+  }
+  BlockPtr getBody() const { return body_; }
+
+  bool accept(interface::BaseInterface *visitor) override {
+    // e.g. visitor->visitMethod(this);
+    return visitor->visitParse();
+  }
+
+private:
+  tokens::TokenType accessModifier_;
+  std::vector<ParamPtr> parameters_;
+  TypePtr returnType_;
+  std::vector<TypePtr> throwsTypes_;
+  std::vector<tokens::TokenType> modifiers_; // e.g. #inline, #virtual, #unsafe
+  BlockPtr body_;
+};
+
+class FieldDeclNode : public DeclarationNode {
+public:
+  FieldDeclNode(const std::string &name, tokens::TokenType accessModifier,
+                bool isConst, TypePtr type, ExpressionPtr initializer,
+                const core::SourceLocation &loc)
+      : DeclarationNode(name, loc), accessModifier_(accessModifier),
+        isConst_(isConst), type_(std::move(type)),
+        initializer_(std::move(initializer)) {}
+
+  tokens::TokenType getAccessModifier() const { return accessModifier_; }
+  bool isConst() const { return isConst_; }
+  TypePtr getType() const { return type_; }
+  ExpressionPtr getInitializer() const { return initializer_; }
+
+  bool accept(interface::BaseInterface *visitor) override {
+    // e.g. visitor->visitField(this);
+    return visitor->visitParse();
+  }
+
+private:
+  tokens::TokenType accessModifier_; // e.g. PUBLIC, PRIVATE, PROTECTED
+  bool isConst_;                     // declared with 'const' vs 'let'
+  TypePtr type_;                     // optional if type is inferred
+  ExpressionPtr initializer_;        // e.g. "= 42"
+};
+
+enum class PropertyKind { Getter, Setter };
+
+class PropertyDeclNode : public DeclarationNode {
+public:
+  // For a getter:
+  PropertyDeclNode(const std::string &propName,
+                   tokens::TokenType accessModifier, PropertyKind kind,
+                   TypePtr propertyType, // e.g. :int
+                   BlockPtr body, const core::SourceLocation &loc)
+      : DeclarationNode(propName, loc), accessModifier_(accessModifier),
+        kind_(kind), propertyType_(std::move(propertyType)),
+        body_(std::move(body)) {}
+
+  // For a setter (where you'd have a parameter):
+  // You could add another constructor or store a ParameterNode for "value".
+
+  tokens::TokenType getAccessModifier() const { return accessModifier_; }
+  PropertyKind getKind() const { return kind_; }
+  TypePtr getPropertyType() const { return propertyType_; }
+  BlockPtr getBody() const { return body_; }
+
+  bool accept(interface::BaseInterface *visitor) override {
+    // e.g. visitor->visitProperty(this);
+    return visitor->visitParse();
+  }
+
+private:
+  tokens::TokenType accessModifier_;
+  PropertyKind kind_;    // Getter vs. Setter
+  TypePtr propertyType_; // For getter (e.g. ": int")
+  BlockPtr body_;
 };
 
 // Forward declarations for declaration visitors
