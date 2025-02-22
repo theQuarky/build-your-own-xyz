@@ -5,6 +5,7 @@
 #include "parser/nodes/statement_nodes.h"
 #include "parser/nodes/type_nodes.h"
 #include <iostream>
+#include <ostream>
 #include <string>
 
 namespace core {
@@ -24,6 +25,230 @@ private:
   std::string getLocationString(const core::SourceLocation &loc) const {
     return "(" + std::to_string(loc.getLine()) + ":" +
            std::to_string(loc.getColumn()) + ")";
+  }
+
+  //---------------------------------------------------------------------------
+  // 1) ClassDeclNode visitor
+  //---------------------------------------------------------------------------
+  void visitClassDecl(const nodes::ClassDeclNode *node) {
+    indent();
+    std::cout << BLUE << "ClassDecl" << RESET << " "
+              << getLocationString(node->getLocation()) << "\n";
+
+    indentLevel_++;
+
+    // Print class name
+    indent();
+    std::cout << "Name: '" << node->getName() << "'\n";
+
+    // Print class-level attributes (if your ClassDeclNode stores them)
+    // e.g., #abstract, #aligned(16)
+    const auto &classModifiers = node->getClassModifiers();
+    if (!classModifiers.empty()) {
+      indent();
+      std::cout << "Class Modifiers:\n";
+      indentLevel_++;
+      for (auto mod : classModifiers) {
+        indent();
+        std::cout << tokenTypeToString(mod) << "\n";
+      }
+      indentLevel_--;
+    }
+
+    // Base class if any
+    if (node->getBaseClass()) {
+      indent();
+      std::cout << "Base Class:\n";
+      indentLevel_++;
+      visitType(node->getBaseClass().get());
+      indentLevel_--;
+    }
+
+    // Implemented interfaces
+    const auto &interfaces = node->getInterfaces();
+    if (!interfaces.empty()) {
+      indent();
+      std::cout << "Interfaces:\n";
+      indentLevel_++;
+      for (const auto &iface : interfaces) {
+        visitType(iface.get());
+      }
+      indentLevel_--;
+    }
+
+    // Class members
+    const auto &members = node->getMembers();
+    if (!members.empty()) {
+      indent();
+      std::cout << "Members:\n";
+      indentLevel_++;
+      for (const auto &member : members) {
+        print(member); // dispatch to the correct visitor method
+      }
+      indentLevel_--;
+    }
+
+    indentLevel_--;
+  }
+
+  //---------------------------------------------------------------------------
+  // 2) MethodDeclNode visitor
+  //---------------------------------------------------------------------------
+  void visitMethodDecl(const nodes::MethodDeclNode *node) {
+    indent();
+    std::cout << BLUE << "MethodDecl" << RESET << " "
+              << getLocationString(node->getLocation()) << "\n";
+
+    indentLevel_++;
+
+    // Access modifier
+    indent();
+    std::cout << "Access: " << tokenTypeToString(node->getAccessModifier())
+              << "\n";
+
+    // Method name
+    indent();
+    std::cout << "Name: '" << node->getName() << "'\n";
+
+    // Parameters
+    const auto &parameters = node->getParameters();
+    if (!parameters.empty()) {
+      indent();
+      std::cout << "Parameters:\n";
+      indentLevel_++;
+      for (const auto &param : parameters) {
+        visitParameter(param.get());
+      }
+      indentLevel_--;
+    }
+
+    // Return type
+    if (node->getReturnType()) {
+      indent();
+      std::cout << "Return Type:\n";
+      indentLevel_++;
+      visitType(node->getReturnType().get());
+      indentLevel_--;
+    }
+
+    // Throws types
+    if (!node->getThrowsTypes().empty()) {
+      indent();
+      std::cout << "Throws:\n";
+      indentLevel_++;
+      for (const auto &throwT : node->getThrowsTypes()) {
+        visitType(throwT.get());
+      }
+      indentLevel_--;
+    }
+
+    // Method modifiers (like #inline, #virtual)
+    if (!node->getModifiers().empty()) {
+      indent();
+      std::cout << "Method Modifiers:\n";
+      indentLevel_++;
+      for (auto mod : node->getModifiers()) {
+        indent();
+        std::cout << modifierToString(mod) << "\n";
+      }
+      indentLevel_--;
+    }
+
+    // Body
+    if (node->getBody()) {
+      indent();
+      std::cout << "Body:\n";
+      indentLevel_++;
+      visitBlock(node->getBody().get());
+      indentLevel_--;
+    }
+
+    indentLevel_--;
+  }
+
+  //---------------------------------------------------------------------------
+  // 3) ConstructorDeclNode visitor
+  //---------------------------------------------------------------------------
+  void visitConstructorDecl(const nodes::ConstructorDeclNode *node) {
+    indent();
+    std::cout << BLUE << "ConstructorDecl" << RESET << " "
+              << getLocationString(node->getLocation()) << "\n";
+
+    indentLevel_++;
+
+    // Access
+    indent();
+    std::cout << "Access: " << tokenTypeToString(node->getAccessModifier())
+              << "\n";
+
+    // Parameters
+    const auto &params = node->getParameters();
+    if (!params.empty()) {
+      indent();
+      std::cout << "Parameters:\n";
+      indentLevel_++;
+      for (const auto &param : params) {
+        visitParameter(param.get());
+      }
+      indentLevel_--;
+    }
+
+    // Body
+    if (node->getBody()) {
+      indent();
+      std::cout << "Body:\n";
+      indentLevel_++;
+      visitBlock(node->getBody().get());
+      indentLevel_--;
+    }
+
+    indentLevel_--;
+  }
+
+  //---------------------------------------------------------------------------
+  // 4) FieldDeclNode visitor
+  //---------------------------------------------------------------------------
+  void visitFieldDecl(const nodes::FieldDeclNode *node) {
+    indent();
+    std::cout << GREEN << "FieldDecl" << RESET << " "
+              << getLocationString(node->getLocation()) << "\n";
+
+    indentLevel_++;
+
+    // Access
+    indent();
+    std::cout << "Access: " << tokenTypeToString(node->getAccessModifier())
+              << "\n";
+
+    // isConst
+    if (node->isConst()) {
+      indent();
+      std::cout << "Const: true\n";
+    }
+
+    // Name
+    indent();
+    std::cout << "Name: '" << node->getName() << "'\n";
+
+    // Type
+    if (node->getType()) {
+      indent();
+      std::cout << "Type:\n";
+      indentLevel_++;
+      visitType(node->getType().get());
+      indentLevel_--;
+    }
+
+    // Initializer
+    if (node->getInitializer()) {
+      indent();
+      std::cout << "Initializer:\n";
+      indentLevel_++;
+      visitExpr(node->getInitializer().get());
+      indentLevel_--;
+    }
+
+    indentLevel_--;
   }
 
   // Function declaration visitor
@@ -296,6 +521,20 @@ private:
       return "string";
     case tokens::TokenType::VOID:
       return "void";
+    case tokens::TokenType::PUBLIC:
+      return "public";
+    case tokens::TokenType::PRIVATE:
+      return "private";
+    case tokens::TokenType::PROTECTED:
+      return "protected";
+    case tokens::TokenType::INLINE:
+      return "#inline";
+    case tokens::TokenType::VIRTUAL:
+      return "#virtual";
+    case tokens::TokenType::UNSAFE:
+      return "#unsafe";
+    case tokens::TokenType::SIMD:
+      return "#simd";
     default:
       return std::to_string(static_cast<int>(type));
     }
@@ -514,8 +753,30 @@ public:
     }
 
     for (const auto &node : nodes) {
-      if (auto funcDecl =
-              std::dynamic_pointer_cast<nodes::FunctionDeclNode>(node)) {
+
+      // 1) Check if it’s a ClassDeclNode
+      if (auto classDecl =
+              std::dynamic_pointer_cast<nodes::ClassDeclNode>(node)) {
+        visitClassDecl(classDecl.get());
+      }
+      // 2) MethodDeclNode
+      else if (auto methodDecl =
+                   std::dynamic_pointer_cast<nodes::MethodDeclNode>(node)) {
+        visitMethodDecl(methodDecl.get());
+      }
+      // 3) ConstructorDeclNode
+      else if (auto ctorDecl =
+                   std::dynamic_pointer_cast<nodes::ConstructorDeclNode>(
+                       node)) {
+        visitConstructorDecl(ctorDecl.get());
+      }
+      // 4) FieldDeclNode
+      else if (auto fieldDecl =
+                   std::dynamic_pointer_cast<nodes::FieldDeclNode>(node)) {
+        visitFieldDecl(fieldDecl.get());
+      } else if (auto funcDecl =
+                     std::dynamic_pointer_cast<nodes::FunctionDeclNode>(node)) {
+        std::cout << "calling function declaration" << std::endl;
         visitFuncDecl(funcDecl.get());
       } else if (auto varDecl =
                      std::dynamic_pointer_cast<nodes::VarDeclNode>(node)) {
@@ -539,9 +800,28 @@ public:
       std::cout << RED << "nullptr" << RESET << "\n";
       return;
     }
-
-    if (auto genericFunc =
-            std::dynamic_pointer_cast<nodes::GenericFunctionDeclNode>(node)) {
+    // 1) Check if it’s a ClassDeclNode
+    if (auto classDecl =
+            std::dynamic_pointer_cast<nodes::ClassDeclNode>(node)) {
+      visitClassDecl(classDecl.get());
+    }
+    // 2) MethodDeclNode
+    else if (auto methodDecl =
+                 std::dynamic_pointer_cast<nodes::MethodDeclNode>(node)) {
+      visitMethodDecl(methodDecl.get());
+    }
+    // 3) ConstructorDeclNode
+    else if (auto ctorDecl =
+                 std::dynamic_pointer_cast<nodes::ConstructorDeclNode>(node)) {
+      visitConstructorDecl(ctorDecl.get());
+    }
+    // 4) FieldDeclNode
+    else if (auto fieldDecl =
+                 std::dynamic_pointer_cast<nodes::FieldDeclNode>(node)) {
+      visitFieldDecl(fieldDecl.get());
+    } else if (auto genericFunc =
+                   std::dynamic_pointer_cast<nodes::GenericFunctionDeclNode>(
+                       node)) {
       visitFuncDecl(genericFunc.get());
     } else if (auto funcDecl =
                    std::dynamic_pointer_cast<nodes::FunctionDeclNode>(node)) {

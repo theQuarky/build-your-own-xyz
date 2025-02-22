@@ -132,10 +132,13 @@ public:
       error("Expected '{' before function body");
       return nullptr;
     }
-
     auto body = stmtVisitor_.parseBlock();
     if (!body)
       return nullptr;
+    if (!consume(tokens::TokenType::RIGHT_BRACE,
+                 "Expected '}' after function body")) {
+      return nullptr;
+    }
 
     // Create appropriate node based on whether it's generic
     if (!genericParams.empty()) {

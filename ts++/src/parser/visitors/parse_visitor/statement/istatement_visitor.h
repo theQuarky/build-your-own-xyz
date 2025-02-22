@@ -10,7 +10,7 @@ public:
 
   // Required parsing methods for all statement visitors
   virtual nodes::StmtPtr parseStatement() = 0;
-  virtual nodes::BlockPtr parseBlock() = 0;
+  virtual nodes::BlockPtr parseBlock(bool noTraverseClosingBrace = false) = 0;
 };
 
 } // namespace visitors

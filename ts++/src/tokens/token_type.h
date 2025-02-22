@@ -17,6 +17,7 @@ enum class TokenType {
   CLASS,            // 'class' keyword for class definitions
   INTERFACE,        // 'interface' keyword for interface definitions
   ENUM,             // 'enum' keyword for enumeration types
+  CONSTRUCTOR,      // 'CONSTRUCTOR' method to init class
   TYPEDEF,          // 'typedef' keyword for type aliases
   NAMESPACE,        // 'namespace' keyword for namespace declarations
   TEMPLATE,         // 'template' keyword for template declarations

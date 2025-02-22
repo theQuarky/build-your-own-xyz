@@ -21,6 +21,7 @@ const std::unordered_map<std::string, tokens::TokenType> &getKeywordMapImpl() {
       {"const", tokens::TokenType::CONST},
       {"function", tokens::TokenType::FUNCTION},
       {"class", tokens::TokenType::CLASS},
+      {"constructor", tokens::TokenType::CONSTRUCTOR},
       {"interface", tokens::TokenType::INTERFACE},
       {"enum", tokens::TokenType::ENUM},
       {"typedef", tokens::TokenType::TYPEDEF},

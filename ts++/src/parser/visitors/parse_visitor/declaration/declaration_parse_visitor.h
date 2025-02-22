@@ -54,5 +54,6 @@ private:
   nodes::TypePtr parsePointerType(nodes::TypePtr baseType,
                                   const core::SourceLocation &location);
   bool parseFunctionModifiers(std::vector<tokens::TokenType> &modifiers);
+  bool parseClassModifiers(std::vector<tokens::TokenType> &modifiers);
 };
 } // namespace visitors
