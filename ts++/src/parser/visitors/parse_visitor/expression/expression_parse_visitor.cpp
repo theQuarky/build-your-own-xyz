@@ -17,12 +17,8 @@ ExpressionParseVisitor::ExpressionParseVisitor(
 
 nodes::ExpressionPtr ExpressionParseVisitor::parseExpression() {
   try {
-    // Start with assignment parsing since it has lowest precedence
-    auto expr = parseAssignment();
-    if (!expr)
-      return nullptr;
-
-    return callVisitor_.parseCallOrMember(expr);
+    // Start with lowest precedence
+    return parseAssignment();
   } catch (const std::exception &e) {
     errorReporter_.error(tokens_.peek().getLocation(),
                          std::string("Error parsing expression: ") + e.what());
@@ -31,13 +27,11 @@ nodes::ExpressionPtr ExpressionParseVisitor::parseExpression() {
 }
 
 nodes::ExpressionPtr ExpressionParseVisitor::parseAssignment() {
-  // First parse left side (which could be an identifier or a more complex
-  // expression)
-  auto expr = parseAdditive();
+  auto expr = parseComparison(); // Changed from parseAdditive to handle
+                                 // comparison operators
   if (!expr)
     return nullptr;
 
-  // Check if this is an assignment
   if (match(tokens::TokenType::EQUALS) ||
       match(tokens::TokenType::PLUS_EQUALS) ||
       match(tokens::TokenType::MINUS_EQUALS) ||
@@ -45,15 +39,36 @@ nodes::ExpressionPtr ExpressionParseVisitor::parseAssignment() {
       match(tokens::TokenType::SLASH_EQUALS)) {
 
     auto op = tokens_.previous().getType();
-
-    // Parse right side of assignment
-    auto value = parseAssignment(); // Assignments are right-associative
+    auto value = parseAssignment();
     if (!value)
       return nullptr;
 
-    // Create assignment node
-    expr = std::make_shared<nodes::AssignmentExpressionNode>(
+    return std::make_shared<nodes::AssignmentExpressionNode>(
         expr->getLocation(), op, expr, value);
+  }
+
+  return expr;
+}
+
+nodes::ExpressionPtr ExpressionParseVisitor::parseComparison() {
+  auto expr = parseAdditive();
+  if (!expr)
+    return nullptr;
+
+  while (match(tokens::TokenType::LESS) ||
+         match(tokens::TokenType::LESS_EQUALS) ||
+         match(tokens::TokenType::GREATER) ||
+         match(tokens::TokenType::GREATER_EQUALS) ||
+         match(tokens::TokenType::EQUALS_EQUALS) ||
+         match(tokens::TokenType::EXCLAIM_EQUALS)) {
+
+    auto op = tokens_.previous().getType();
+    auto right = parseAdditive();
+    if (!right)
+      return nullptr;
+
+    expr = std::make_shared<nodes::BinaryExpressionNode>(expr->getLocation(),
+                                                         op, expr, right);
   }
 
   return expr;
@@ -82,7 +97,8 @@ nodes::ExpressionPtr ExpressionParseVisitor::parseMultiplicative() {
   if (!expr)
     return nullptr;
 
-  while (match(tokens::TokenType::STAR) || match(tokens::TokenType::SLASH)) {
+  while (match(tokens::TokenType::STAR) || match(tokens::TokenType::SLASH) ||
+         match(tokens::TokenType::PERCENT)) {
     auto op = tokens_.previous().getType();
     auto right = parseUnary();
     if (!right)

@@ -403,7 +403,6 @@ private:
     indentLevel_--;
   }
 
-  // Statement visitor
   void visitStmt(const nodes::StatementNode *stmt) {
     if (!stmt) {
       indent();
@@ -411,6 +410,7 @@ private:
       return;
     }
 
+    // Handle all statement types
     if (auto exprStmt = dynamic_cast<const nodes::ExpressionStmtNode *>(stmt)) {
       visitExprStmt(exprStmt);
     } else if (auto returnStmt =
@@ -421,10 +421,87 @@ private:
     } else if (auto declStmt =
                    dynamic_cast<const nodes::DeclarationStmtNode *>(stmt)) {
       visitDeclStmt(declStmt);
+    } else if (auto whileStmt =
+                   dynamic_cast<const nodes::WhileStmtNode *>(stmt)) {
+      visitWhileStmt(whileStmt);
+    } else if (auto doWhileStmt =
+                   dynamic_cast<const nodes::DoWhileStmtNode *>(stmt)) {
+      visitDoWhileStmt(doWhileStmt);
+    } else if (auto blockStmt = dynamic_cast<const nodes::BlockNode *>(stmt)) {
+      visitBlock(blockStmt);
+    } else if (auto breakStmt =
+                   dynamic_cast<const nodes::BreakStmtNode *>(stmt)) {
+      visitBreakStmt(breakStmt);
+    } else if (auto continueStmt =
+                   dynamic_cast<const nodes::ContinueStmtNode *>(stmt)) {
+      visitContinueStmt(continueStmt);
     } else {
       indent();
-      std::cout << RED << "Unknown statement type" << RESET << "\n";
+      std::cout << RED << "Unknown statement type at "
+                << stmt->getLocation().getLine() << ":"
+                << stmt->getLocation().getColumn() << RESET << "\n";
     }
+  }
+
+  // Add these new visit methods:
+  void visitWhileStmt(const nodes::WhileStmtNode *node) {
+    indent();
+    std::cout << "While " << getLocationString(node->getLocation()) << "\n";
+
+    indentLevel_++;
+
+    indent();
+    std::cout << "Condition:\n";
+    indentLevel_++;
+    visitExpr(node->getCondition().get());
+    indentLevel_--;
+
+    indent();
+    std::cout << "Body:\n";
+    indentLevel_++;
+    visitStmt(node->getBody().get());
+    indentLevel_--;
+
+    indentLevel_--;
+  }
+
+  void visitDoWhileStmt(const nodes::DoWhileStmtNode *node) {
+    indent();
+    std::cout << "DoWhile " << getLocationString(node->getLocation()) << "\n";
+
+    indentLevel_++;
+
+    indent();
+    std::cout << "Body:\n";
+    indentLevel_++;
+    visitStmt(node->getBody().get());
+    indentLevel_--;
+
+    indent();
+    std::cout << "Condition:\n";
+    indentLevel_++;
+    visitExpr(node->getCondition().get());
+    indentLevel_--;
+
+    indentLevel_--;
+  }
+
+  void visitBreakStmt(const nodes::BreakStmtNode *node) {
+    indent();
+    std::cout << "Break";
+    if (!node->getLabel().empty()) {
+      std::cout << " " << node->getLabel();
+    }
+    std::cout << " " << getLocationString(node->getLocation()) << "\n";
+  }
+
+  void visitContinueStmt(const nodes::ContinueStmtNode *node) {
+    indent();
+    std::cout << "Continue";
+    if (!node->getLabel().empty()) {
+      std::cout << " " << node->getLabel();
+    }
+    std::cout << " " << getLocationString(node->getLocation()) << "\n";
   }
 
   // Return statement visitor

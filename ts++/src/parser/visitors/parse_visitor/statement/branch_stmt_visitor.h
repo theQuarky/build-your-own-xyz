@@ -4,6 +4,8 @@
 #include "parser/visitors/parse_visitor/expression/iexpression_visitor.h"
 #include "parser/visitors/parse_visitor/statement/istatement_visitor.h"
 #include "tokens/stream/token_stream.h"
+#include <iostream>
+#include <ostream>
 
 namespace visitors {
 
@@ -26,24 +28,30 @@ public:
       return nullptr;
     }
 
+    // Parse condition using the expression visitor
     auto condition = exprVisitor_.parseExpression();
-    if (!condition)
+    if (!condition) {
       return nullptr;
+    }
 
     if (!consume(tokens::TokenType::RIGHT_PAREN,
                  "Expected ')' after condition")) {
       return nullptr;
     }
 
+    // Parse then branch
     auto thenBranch = stmtVisitor_.parseStatement();
-    if (!thenBranch)
+    if (!thenBranch) {
       return nullptr;
+    }
 
+    // Parse optional else branch
     nodes::StmtPtr elseBranch;
     if (match(tokens::TokenType::ELSE)) {
       elseBranch = stmtVisitor_.parseStatement();
-      if (!elseBranch)
+      if (!elseBranch) {
         return nullptr;
+      }
     }
 
     return std::make_shared<nodes::IfStmtNode>(condition, thenBranch,
