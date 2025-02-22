@@ -24,7 +24,8 @@ public:
   nodes::ExpressionPtr parseAdditive();
   nodes::ExpressionPtr parseAssignment();
   nodes::ExpressionPtr parseMultiplicative();
-
+  nodes::ExpressionPtr parseComparison();
+  
   // Friend declarations for sub-visitors
   friend class BinaryExpressionVisitor;
   friend class UnaryExpressionVisitor;
