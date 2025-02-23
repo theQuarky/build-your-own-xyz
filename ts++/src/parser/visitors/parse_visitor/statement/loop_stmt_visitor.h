@@ -77,15 +77,12 @@ public:
   nodes::StmtPtr parseForStatement() {
     auto location = tokens_.previous().getLocation();
 
-    // Parse '('
     if (!consume(tokens::TokenType::LEFT_PAREN, "Expected '(' after 'for'")) {
       return nullptr;
     }
 
-    // Parse initializer
-    nodes::StmtPtr initializer;
+    // Handle for-of loop
     if (match(tokens::TokenType::LET) || match(tokens::TokenType::CONST)) {
-      // Variable declaration initializer
       bool isConst = tokens_.previous().getType() == tokens::TokenType::CONST;
 
       if (!match(tokens::TokenType::IDENTIFIER)) {
@@ -102,71 +99,31 @@ public:
           return nullptr;
       }
 
-      // Parse initializer value
-      if (!consume(tokens::TokenType::EQUALS,
-                   "Expected '=' after variable declaration")) {
-        return nullptr;
+      // Check for 'of' keyword
+      if (match(tokens::TokenType::OF)) {
+        auto iterable = exprVisitor_.parseExpression();
+        if (!iterable)
+          return nullptr;
+
+        if (!consume(tokens::TokenType::RIGHT_PAREN,
+                     "Expected ')' after for-of clause")) {
+          return nullptr;
+        }
+
+        auto body = stmtVisitor_.parseStatement();
+        if (!body)
+          return nullptr;
+
+        return std::make_shared<nodes::ForOfStmtNode>(isConst, identifier,
+                                                      iterable, body, location);
       }
 
-      auto initialValue = exprVisitor_.parseExpression();
-      if (!initialValue)
-        return nullptr;
-
-      auto varDecl = std::make_shared<nodes::VarDeclNode>(
-          identifier, type, initialValue, tokens::TokenType::ERROR_TOKEN,
-          isConst, location);
-
-      initializer =
-          std::make_shared<nodes::DeclarationStmtNode>(varDecl, location);
-
-    } else if (!match(tokens::TokenType::SEMICOLON)) {
-      // Expression initializer
-      auto expr = exprVisitor_.parseExpression();
-      if (!expr)
-        return nullptr;
-      initializer = std::make_shared<nodes::ExpressionStmtNode>(expr, location);
+      // Regular for loop with variable declaration
+      return parseForWithDecl(location, isConst, identifier, type);
     }
 
-    // Require semicolon after initializer
-    if (!match(tokens::TokenType::SEMICOLON)) {
-      error("Expected ';' after for loop initializer");
-      return nullptr;
-    }
-
-    // Parse condition
-    nodes::ExpressionPtr condition;
-    if (!match(tokens::TokenType::SEMICOLON)) {
-      condition = exprVisitor_.parseExpression();
-      if (!condition)
-        return nullptr;
-
-      if (!consume(tokens::TokenType::SEMICOLON,
-                   "Expected ';' after loop condition")) {
-        return nullptr;
-      }
-    }
-
-    // Parse increment
-    nodes::ExpressionPtr increment;
-    if (!check(tokens::TokenType::RIGHT_PAREN)) {
-      increment = exprVisitor_.parseExpression();
-      if (!increment)
-        return nullptr;
-    }
-
-    // Parse ')'
-    if (!consume(tokens::TokenType::RIGHT_PAREN,
-                 "Expected ')' after for clauses")) {
-      return nullptr;
-    }
-
-    // Parse body
-    auto body = stmtVisitor_.parseStatement();
-    if (!body)
-      return nullptr;
-
-    return std::make_shared<nodes::ForStmtNode>(initializer, condition,
-                                                increment, body, location);
+    // Traditional for loop
+    return parseTraditionalFor(location);
   }
 
 private:

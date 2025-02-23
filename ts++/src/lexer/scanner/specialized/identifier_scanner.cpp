@@ -29,6 +29,7 @@ const std::unordered_map<std::string, tokens::TokenType> &getKeywordMapImpl() {
       {"if", tokens::TokenType::IF},
       {"else", tokens::TokenType::ELSE},
       {"for", tokens::TokenType::FOR},
+      {"of", tokens::TokenType::OF},
       {"while", tokens::TokenType::WHILE},
       {"do", tokens::TokenType::DO},
       {"break", tokens::TokenType::BREAK},
