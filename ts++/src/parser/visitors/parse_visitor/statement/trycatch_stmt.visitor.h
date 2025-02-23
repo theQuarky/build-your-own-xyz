@@ -2,8 +2,8 @@
 #pragma once
 #include "core/diagnostics/error_reporter.h"
 #include "parser/nodes/statement_nodes.h"
-#include "tokens/stream/token_stream.h"
 #include "parser/visitors/parse_visitor/statement/istatement_visitor.h"
+#include "tokens/stream/token_stream.h"
 
 namespace visitors {
 
@@ -13,7 +13,7 @@ class TryCatchStatementVisitor {
 public:
   TryCatchStatementVisitor(tokens::TokenStream &tokens,
                            core::ErrorReporter &errorReporter,
-                           IStatementVisitor& stmtVisitor)
+                           IStatementVisitor &stmtVisitor)
       : tokens_(tokens), errorReporter_(errorReporter),
         stmtVisitor_(stmtVisitor) {}
 
@@ -35,9 +35,9 @@ public:
       catchClauses.push_back(std::move(catchClause));
     }
 
-    // Parse optional finally block
+    // Parse optional finally block (fix by checking for FINALLY token type)
     nodes::StmtPtr finallyBlock;
-    if (match(tokens::TokenType::FINALLY)) {
+    if (match(tokens::TokenType::FINALLY)) { // Add FINALLY to TokenType enum
       finallyBlock = stmtVisitor_.parseStatement();
       if (!finallyBlock)
         return nullptr;
@@ -119,7 +119,8 @@ private:
 
   tokens::TokenStream &tokens_;
   core::ErrorReporter &errorReporter_;
-  IStatementVisitor& stmtVisitor_;;
+  IStatementVisitor &stmtVisitor_;
+  ;
 };
 
 } // namespace visitors

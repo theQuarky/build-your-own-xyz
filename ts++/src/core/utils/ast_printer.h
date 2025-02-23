@@ -407,7 +407,9 @@ private:
     else if (auto continueStmt =
                  dynamic_cast<const nodes::ContinueStmtNode *>(stmt))
       visitContinueStmt(continueStmt);
-    else {
+    else if (auto tryStmt = dynamic_cast<const nodes::TryStmtNode *>(stmt)) {
+      visitTryStmt(tryStmt);
+    } else {
       indent();
       std::cout << RED << "Unknown statement type at "
                 << stmt->getLocation().getLine() << ":"
@@ -693,6 +695,40 @@ private:
         printLine("Unknown declaration type", RED);
     });
   }
+  // Visit a try statement
+  void visitTryStmt(const nodes::TryStmtNode *node) {
+    printLine("Try " + getLocationString(node->getLocation()));
+    withIndent([&]() {
+      // Print try block
+      printLine("Try Block:");
+      withIndent([&]() { visitStmt(node->getTryBlock().get()); });
+
+      // Print catch clauses
+      const auto &catchClauses = node->getCatchClauses();
+      if (!catchClauses.empty()) {
+        printLine("Catch Clauses:");
+        withIndent([&]() {
+          for (const auto &clause : catchClauses) {
+            printLine("Catch Parameter: '" + clause.parameter + "'");
+            if (clause.parameterType) {
+              withIndent([&]() {
+                printLine("Parameter Type:");
+                withIndent([&]() { visitType(clause.parameterType.get()); });
+              });
+            }
+            printLine("Catch Body:");
+            withIndent([&]() { visitStmt(clause.body.get()); });
+          }
+        });
+      }
+
+      // Print finally block if present
+      if (node->getFinallyBlock()) {
+        printLine("Finally Block:");
+        withIndent([&]() { visitStmt(node->getFinallyBlock().get()); });
+      }
+    });
+  }
 
   //---------------------------------------------------------------------------
   // Utility Functions
@@ -891,6 +927,8 @@ public:
       visitExprStmt(exprStmt.get());
     else if (auto expr = std::dynamic_pointer_cast<nodes::ExpressionNode>(node))
       visitExpr(expr.get());
+    else if (auto tryStmt = std::dynamic_pointer_cast<nodes::TryStmtNode>(node))
+      visitTryStmt(tryStmt.get());
     else {
       indent();
       std::cout << RED << "Unknown node type at "
