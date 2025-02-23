@@ -17,29 +17,60 @@ public:
   }
 
   nodes::ExpressionPtr parseUnary() {
-    if (isUnaryOperator(tokens_.peek().getType())) {
-      auto op = tokens_.peek();
-      tokens_.advance();
-
-      // Recursive call to handle nested unary operators
+    // Check for prefix operators first
+    if (isUnaryPrefixOperator(tokens_.peek().getType())) {
+      auto op = tokens_.advance();
       auto operand = parseUnary();
       if (!operand)
         return nullptr;
-
-      return std::make_shared<nodes::UnaryExpressionNode>(op.getLocation(),
-                                                          op.getType(), operand,
-                                                          true // isPrefix
+      return std::make_shared<nodes::UnaryExpressionNode>(
+          op.getLocation(), op.getType(), operand, true // isPrefix = true
       );
     }
 
-    // If not a unary operator, parse as primary expression
-    return parentVisitor_.parsePrimary();
+    // Parse primary expression
+    auto expr = parentVisitor_.parsePrimary();
+    if (!expr)
+      return nullptr;
+
+    // Check for postfix operators (++, --)
+    while (isUnaryPostfixOperator(tokens_.peek().getType())) {
+      auto op = tokens_.advance();
+      expr = std::make_shared<nodes::UnaryExpressionNode>(
+          op.getLocation(), op.getType(), expr, false // isPrefix = false
+      );
+    }
+
+    return expr;
   }
 
 private:
   tokens::TokenStream &tokens_;
   core::ErrorReporter &errorReporter_;
   IExpressionVisitor &parentVisitor_;
+
+  bool isUnaryPrefixOperator(tokens::TokenType type) const {
+    switch (type) {
+    case tokens::TokenType::MINUS:       // -
+    case tokens::TokenType::EXCLAIM:     // !
+    case tokens::TokenType::TILDE:       // ~
+    case tokens::TokenType::PLUS_PLUS:   // ++
+    case tokens::TokenType::MINUS_MINUS: // --
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  bool isUnaryPostfixOperator(tokens::TokenType type) const {
+    switch (type) {
+    case tokens::TokenType::PLUS_PLUS:   // ++
+    case tokens::TokenType::MINUS_MINUS: // --
+      return true;
+    default:
+      return false;
+    }
+  }
 
   bool isUnaryOperator(tokens::TokenType type) const {
     switch (type) {

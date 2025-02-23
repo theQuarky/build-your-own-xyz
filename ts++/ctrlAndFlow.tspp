@@ -57,12 +57,12 @@ function main(): void {
     } while (counter > 0);
 
     // 6. For Loop
-    // for (let i = 0; i < max; i++) {
-    //     if (i % 2 == 0) {
-    //         continue;  // Skip even numbers
-    //     }
-    //     text = text;
-    // }
+    for (let i = 0; i < max; i++) {
+        if (i % 2 == 0) {
+            continue;  // Skip even numbers
+        }
+        text = text;
+    }
 
     // // // 7. For-Each Loop
     // // let numbers: int[] = [1, 2, 3, 4, 5];
