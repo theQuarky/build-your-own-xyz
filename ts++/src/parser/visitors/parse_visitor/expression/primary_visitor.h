@@ -18,9 +18,9 @@ public:
   }
 
   nodes::ExpressionPtr parsePrimary() {
-    // Return nullptr for declaration keywords to prevent infinite loops
-    if (isDeclKeyword(tokens_.peek().getType())) {
-      return nullptr;
+    // Handle array literals [1, 2, 3]
+    if (match(tokens::TokenType::LEFT_BRACKET)) {
+      return parseArrayLiteral();
     }
 
     // Handle identifiers
@@ -34,7 +34,6 @@ public:
     if (match(tokens::TokenType::NUMBER) ||
         match(tokens::TokenType::STRING_LITERAL) ||
         match(tokens::TokenType::TRUE) || match(tokens::TokenType::FALSE)) {
-
       auto token = tokens_.previous();
       return std::make_shared<nodes::LiteralExpressionNode>(
           token.getLocation(), token.getType(), token.getLexeme());
@@ -59,6 +58,35 @@ public:
   }
 
 private:
+  // Add utility method to parse array literals
+  nodes::ExpressionPtr parseArrayLiteral() {
+    auto location = tokens_.previous().getLocation();
+    std::vector<nodes::ExpressionPtr> elements;
+
+    // Handle empty array
+    if (check(tokens::TokenType::RIGHT_BRACKET)) {
+      tokens_.advance();
+      return std::make_shared<nodes::ArrayLiteralNode>(location,
+                                                       std::move(elements));
+    }
+
+    // Parse array elements
+    do {
+      auto element = parentVisitor_.parseExpression();
+      if (!element)
+        return nullptr;
+      elements.push_back(std::move(element));
+    } while (match(tokens::TokenType::COMMA));
+
+    if (!consume(tokens::TokenType::RIGHT_BRACKET,
+                 "Expected ']' after array elements")) {
+      return nullptr;
+    }
+
+    return std::make_shared<nodes::ArrayLiteralNode>(location,
+                                                     std::move(elements));
+  }
+
   bool isDeclKeyword(tokens::TokenType type) const {
     switch (type) {
     case tokens::TokenType::LET:
