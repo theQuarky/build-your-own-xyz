@@ -81,26 +81,13 @@ public:
     std::vector<nodes::StmtPtr> statements;
 
     while (!check(tokens::TokenType::RIGHT_BRACE) && !tokens_.isAtEnd()) {
-      // Print current token before parsing
-      std::cout << "Before parsing statement in block. Token: "
-                << tokens_.peek().getLexeme()
-                << " (type: " << static_cast<int>(tokens_.peek().getType())
-                << ")" << std::endl;
 
       if (auto stmt = parseStatement()) {
-        // Print what was successfully parsed
-        std::cout << "Successfully parsed statement" << std::endl;
         statements.push_back(std::move(stmt));
       } else {
         // If parsing failed, print current token
-        std::cout << "Failed to parse statement. Next token: "
-                  << tokens_.peek().getLexeme() << std::endl;
         synchronize();
       }
-
-      // Print current token after parsing statement
-      std::cout << "After parsing statement. Next token: "
-                << tokens_.peek().getLexeme() << std::endl;
     }
 
     if (!consume(tokens::TokenType::RIGHT_BRACE, "Expected '}' after block")) {
