@@ -117,9 +117,10 @@ function main(): void {
 }
 
 // // Helper function for division
-// function divide(a: int, b: int): int {
-//     if (b == 0) {
-//         throw new Error("Division by zero");
-//     }
-//     return a / b;
-// }
+function divide(a: int, b: int): int {
+    if (b == 0) {
+        let location = new Location(45, 54);
+        throw new Error("Division by zero", location);
+    }
+    return a / b;
+}

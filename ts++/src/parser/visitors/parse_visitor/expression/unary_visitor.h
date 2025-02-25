@@ -17,7 +17,14 @@ public:
   }
 
   nodes::ExpressionPtr parseUnary() {
-    // Check for prefix operators first
+    // Check for NEW keyword first (high precedence)
+    if (tokens_.peek().getType() == tokens::TokenType::NEW) {
+      tokens_.advance();
+      // Use the parent's parseNewExpression method
+      return parentVisitor_.parseNewExpression();
+    }
+
+    // Check for prefix operators next
     if (isUnaryPrefixOperator(tokens_.peek().getType())) {
       auto op = tokens_.advance();
       auto operand = parseUnary();

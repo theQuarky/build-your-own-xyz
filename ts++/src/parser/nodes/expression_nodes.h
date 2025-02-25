@@ -200,16 +200,16 @@ public:
 // New expression (new Type(args))
 class NewExpressionNode : public ExpressionNode {
 public:
-  NewExpressionNode(const core::SourceLocation &loc, std::string typeName,
+  NewExpressionNode(const core::SourceLocation &loc, std::string className,
                     std::vector<ExpressionPtr> arguments)
       : ExpressionNode(loc, tokens::TokenType::NEW),
-        typeName_(std::move(typeName)), arguments_(std::move(arguments)) {}
+        className_(std::move(className)), arguments_(std::move(arguments)) {}
 
-  const std::string &getTypeName() const { return typeName_; }
+  const std::string &getClassName() const { return className_; }
   const std::vector<ExpressionPtr> &getArguments() const { return arguments_; }
 
 private:
-  std::string typeName_;
+  std::string className_;
   std::vector<ExpressionPtr> arguments_;
 };
 

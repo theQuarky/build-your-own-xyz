@@ -409,6 +409,9 @@ private:
       visitContinueStmt(continueStmt);
     else if (auto tryStmt = dynamic_cast<const nodes::TryStmtNode *>(stmt)) {
       visitTryStmt(tryStmt);
+    } else if (auto throwStmt =
+                   dynamic_cast<const nodes::ThrowStmtNode *>(stmt)) {
+      visitThrowStmt(throwStmt);
     } else {
       indent();
       std::cout << RED << "Unknown statement type at "
@@ -489,6 +492,9 @@ private:
     else if (auto unary =
                  dynamic_cast<const nodes::UnaryExpressionNode *>(expr)) {
       visitUnaryExpr(unary);
+    } else if (auto newExpr =
+                   dynamic_cast<const nodes::NewExpressionNode *>(expr)) {
+      visitNewExpr(newExpr);
     }
     // Generic expression fallback.
     else {
@@ -730,6 +736,31 @@ private:
     });
   }
 
+  // Visit new expression
+  void visitNewExpr(const nodes::NewExpressionNode *node) {
+    indent();
+    std::cout << "NewExpression: " << node->getClassName() << " "
+              << getLocationString(node->getLocation()) << "\n";
+
+    withIndent([&]() {
+      const auto &args = node->getArguments();
+      if (!args.empty()) {
+        printLine("Arguments:");
+        withIndent([&]() {
+          for (const auto &arg : args) {
+            visitExpr(arg.get());
+          }
+        });
+      }
+    });
+  }
+
+  // Visit a throw statement
+  void visitThrowStmt(const nodes::ThrowStmtNode *node) {
+    printLine("Throw " + getLocationString(node->getLocation()));
+    withIndent([&]() { visitExpr(node->getValue().get()); });
+  }
+
   //---------------------------------------------------------------------------
   // Utility Functions
   //---------------------------------------------------------------------------
@@ -861,6 +892,9 @@ public:
       else if (auto expr =
                    std::dynamic_pointer_cast<nodes::ExpressionNode>(node))
         visitExpr(expr.get());
+      else if (auto throwStmt =
+                   std::dynamic_pointer_cast<nodes::ThrowStmtNode>(node))
+        visitThrowStmt(throwStmt.get());
       else {
         indent();
         std::cout << RED << "Unknown node type at "
