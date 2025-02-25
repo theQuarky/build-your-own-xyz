@@ -13,6 +13,7 @@ public:
   virtual nodes::ExpressionPtr parsePrimary() = 0;
   virtual nodes::ExpressionPtr parseUnary() = 0;
   virtual nodes::TypePtr parseType() = 0;
+  virtual nodes::ExpressionPtr parseNewExpression() = 0;
 };
 
 } // namespace visitors

@@ -21,11 +21,12 @@ public:
   nodes::ExpressionPtr parsePrimary() override;
   nodes::ExpressionPtr parseUnary() override;
   nodes::TypePtr parseType() override;
+  nodes::ExpressionPtr parseNewExpression() override;
   nodes::ExpressionPtr parseAdditive();
   nodes::ExpressionPtr parseAssignment();
   nodes::ExpressionPtr parseMultiplicative();
   nodes::ExpressionPtr parseComparison();
-  
+
   // Friend declarations for sub-visitors
   friend class BinaryExpressionVisitor;
   friend class UnaryExpressionVisitor;
@@ -38,7 +39,14 @@ private:
   bool match(tokens::TokenType type);
   bool check(tokens::TokenType type) const;
   void error(const std::string &message);
-
+  inline bool consume(tokens::TokenType type, const std::string &message) {
+    if (check(type)) {
+      tokens_.advance();
+      return true;
+    }
+    error(message);
+    return false;
+  }
   // Member variables
   tokens::TokenStream &tokens_;
   core::ErrorReporter &errorReporter_;

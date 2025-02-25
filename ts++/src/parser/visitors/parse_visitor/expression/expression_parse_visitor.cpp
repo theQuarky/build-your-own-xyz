@@ -132,6 +132,42 @@ nodes::TypePtr ExpressionParseVisitor::parseType() {
   return std::make_shared<nodes::NamedTypeNode>(name, location);
 }
 
+nodes::ExpressionPtr ExpressionParseVisitor::parseNewExpression() {
+  auto location = tokens_.previous().getLocation();
+
+  // Parse constructor name (class name)
+  if (!match(tokens::TokenType::IDENTIFIER)) {
+    error("Expected class name after 'new'");
+    return nullptr;
+  }
+
+  std::string className = tokens_.previous().getLexeme();
+
+  // Parse constructor arguments
+  if (!consume(tokens::TokenType::LEFT_PAREN,
+               "Expected '(' after class name")) {
+    return nullptr;
+  }
+
+  std::vector<nodes::ExpressionPtr> arguments;
+  if (!check(tokens::TokenType::RIGHT_PAREN)) {
+    do {
+      auto arg = parseExpression();
+      if (!arg)
+        return nullptr;
+      arguments.push_back(std::move(arg));
+    } while (match(tokens::TokenType::COMMA));
+  }
+
+  if (!consume(tokens::TokenType::RIGHT_PAREN,
+               "Expected ')' after constructor arguments")) {
+    return nullptr;
+  }
+
+  return std::make_shared<nodes::NewExpressionNode>(location, className,
+                                                    std::move(arguments));
+}
+
 bool ExpressionParseVisitor::match(tokens::TokenType type) {
   if (check(type)) {
     tokens_.advance();
