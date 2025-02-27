@@ -4,6 +4,8 @@
 #include "parser/visitors/parse_visitor/expression/iexpression_visitor.h"
 #include "tokens/stream/token_stream.h"
 #include "tokens/token_type.h"
+#include <iostream>
+#include <ostream>
 
 namespace visitors {
 
@@ -52,6 +54,8 @@ public:
 
       return expr;
     }
+    std::cout << "current token: " << tokens_.getCurrentToken().getLexeme()
+              << std::endl;
 
     error("Expected expression");
     return nullptr;

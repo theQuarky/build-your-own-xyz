@@ -24,6 +24,18 @@ public:
 
 using StmtPtr = std::shared_ptr<StatementNode>;
 
+/**
+ * Represents a single case in a switch statement
+ */
+struct SwitchCase {
+  bool isDefault;              // Whether this is a default case
+  ExpressionPtr value;         // The case expression (nullptr for default)
+  std::vector<StmtPtr> body;   // The statements in this case
+
+  SwitchCase(bool isDefault, ExpressionPtr value, std::vector<StmtPtr> body)
+      : isDefault(isDefault), value(std::move(value)), body(std::move(body)) {}
+};
+
 class DeclarationStmtNode : public StatementNode {
 public:
     DeclarationStmtNode(DeclPtr declaration, const core::SourceLocation& loc)
@@ -293,6 +305,27 @@ private:
 };
 
 /**
+ * Switch statement: switch (expr) { case expr: ... default: ... }
+ */
+class SwitchStmtNode : public StatementNode {
+public:
+  SwitchStmtNode(ExpressionPtr expression, std::vector<SwitchCase> cases,
+                const core::SourceLocation &loc)
+      : StatementNode(loc), expression_(std::move(expression)),
+        cases_(std::move(cases)) {}
+
+  ExpressionPtr getExpression() const { return expression_; }
+  const std::vector<SwitchCase> &getCases() const { return cases_; }
+  bool accept(interface::BaseInterface *visitor) override {
+    return visitor->visitParse();
+  }
+
+private:
+  ExpressionPtr expression_;
+  std::vector<SwitchCase> cases_;
+};
+
+/**
  * Assembly statement: #asm("...")
  */
 class AssemblyStmtNode : public StatementNode {
@@ -322,6 +355,7 @@ public:
   virtual bool visitBlock(BlockNode *node) = 0;
   virtual bool visitExpressionStmt(ExpressionStmtNode *node) = 0;
   virtual bool visitIf(IfStmtNode *node) = 0;
+  virtual bool visitSwitch(SwitchStmtNode *node) = 0;
   virtual bool visitWhile(WhileStmtNode *node) = 0;
   virtual bool visitDoWhile(DoWhileStmtNode *node) = 0;
   virtual bool visitFor(ForStmtNode *node) = 0;

@@ -59,8 +59,96 @@ public:
   }
 
   nodes::StmtPtr parseSwitchStatement() {
-    // TODO: Implement switch statement parsing
-    return nullptr;
+    auto location = tokens_.previous().getLocation();
+    
+    // Parse the opening parenthesis
+    if (!consume(tokens::TokenType::LEFT_PAREN, "Expected '(' after 'switch'")) {
+      return nullptr;
+    }
+    
+    // Parse the switch expression
+    auto expression = exprVisitor_.parseExpression();
+    if (!expression) {
+      return nullptr;
+    }
+    
+    // Parse the closing parenthesis
+    if (!consume(tokens::TokenType::RIGHT_PAREN, "Expected ')' after switch expression")) {
+      return nullptr;
+    }
+    
+    // Parse the opening brace
+    if (!consume(tokens::TokenType::LEFT_BRACE, "Expected '{' after switch expression")) {
+      return nullptr;
+    }
+    
+    // Parse the case clauses
+    std::vector<nodes::SwitchCase> cases;
+    bool hasDefaultCase = false;
+    
+    while (!check(tokens::TokenType::RIGHT_BRACE) && !tokens_.isAtEnd()) {
+      // Case or default clause
+      if (match(tokens::TokenType::CASE) || match(tokens::TokenType::DEFAULT)) {
+        bool isDefault = tokens_.previous().getType() == tokens::TokenType::DEFAULT;
+        
+        // Default case should only appear once
+        if (isDefault && hasDefaultCase) {
+          error("Cannot have more than one default clause in a switch statement");
+          return nullptr;
+        }
+        
+        if (isDefault) {
+          hasDefaultCase = true;
+        }
+        
+        // For case, parse the expression; for default, expression is nullptr
+        nodes::ExpressionPtr caseExpr = nullptr;
+        if (!isDefault) {
+          caseExpr = exprVisitor_.parseExpression();
+          if (!caseExpr) {
+            return nullptr;
+          }
+        }
+        
+        // Parse the colon after case expr or default
+        if (!consume(tokens::TokenType::COLON, "Expected ':' after case expression")) {
+          return nullptr;
+        }
+        
+        // Check for and skip erroneous semicolon that might be inserted after colon
+        if (check(tokens::TokenType::SEMICOLON)) {
+          tokens_.advance(); // Skip the semicolon
+        }
+        
+        // Parse statements until next case, default, or closing brace
+        std::vector<nodes::StmtPtr> statements;
+        while (!check(tokens::TokenType::CASE) && 
+               !check(tokens::TokenType::DEFAULT) && 
+               !check(tokens::TokenType::RIGHT_BRACE) && 
+               !tokens_.isAtEnd()) {
+          auto stmt = stmtVisitor_.parseStatement();
+          if (stmt) {
+            statements.push_back(std::move(stmt));
+          } else {
+            // If statement parsing failed, try to synchronize and continue
+            tokens_.advance();
+          }
+        }
+        
+        // Add the case to our list
+        cases.emplace_back(isDefault, std::move(caseExpr), std::move(statements));
+      } else {
+        error("Expected 'case' or 'default' in switch statement");
+        return nullptr;
+      }
+    }
+    
+    // Parse the closing brace
+    if (!consume(tokens::TokenType::RIGHT_BRACE, "Expected '}' after switch cases")) {
+      return nullptr;
+    }
+    
+    return std::make_shared<nodes::SwitchStmtNode>(expression, std::move(cases), location);
   }
 
 private:
