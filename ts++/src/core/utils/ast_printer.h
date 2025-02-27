@@ -412,6 +412,8 @@ private:
     } else if (auto throwStmt =
                    dynamic_cast<const nodes::ThrowStmtNode *>(stmt)) {
       visitThrowStmt(throwStmt);
+    } else if(auto swithStmt = dynamic_cast<const nodes::SwitchStmtNode *>(stmt)){
+      visitSwitchStmt(swithStmt);
     } else {
       indent();
       std::cout << RED << "Unknown statement type at "
@@ -754,6 +756,53 @@ private:
       }
     });
   }
+
+  // Visit switch statement
+  void visitSwitchStmt(const nodes::SwitchStmtNode *node) {
+    printLine("Switch " + getLocationString(node->getLocation()));
+    
+    withIndent([&]() {
+      // Print the expression being switched on
+      printLine("Expression:");
+      withIndent([&]() { 
+        visitExpr(node->getExpression().get()); 
+      });
+      
+      // Print all the cases
+      const auto &cases = node->getCases();
+      if (!cases.empty()) {
+        printLine("Cases:");
+        withIndent([&]() {
+          for (const auto &caseItem : cases) {
+            if (caseItem.isDefault) {
+              printLine("Default Case:");
+            } else {
+              printLine("Case:");
+              withIndent([&]() {
+                printLine("Value:");
+                withIndent([&]() { 
+                  visitExpr(caseItem.value.get()); 
+                });
+              });
+            }
+            
+            // Print the statements in this case
+            if (!caseItem.body.empty()) {
+              printLine("Body:");
+              withIndent([&]() {
+                for (const auto &stmt : caseItem.body) {
+                  visitStmt(stmt.get());
+                }
+              });
+            }
+          }
+        });
+      }
+    });
+  }
+
+  // Visit cases
+  void visitCase(const nodes::CastExpressionNode) {}
 
   // Visit a throw statement
   void visitThrowStmt(const nodes::ThrowStmtNode *node) {
