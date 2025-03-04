@@ -28,8 +28,11 @@ public:
     // Handle identifiers
     if (match(tokens::TokenType::IDENTIFIER)) {
       auto token = tokens_.previous();
-      return std::make_shared<nodes::IdentifierExpressionNode>(
+      auto expr = std::make_shared<nodes::IdentifierExpressionNode>(
           token.getLocation(), token.getLexeme());
+          
+      // Parse any postfix operations (member access, array indexing, etc.)
+      return parsePostfixOperations(expr);
     }
 
     // Handle literals
@@ -37,8 +40,11 @@ public:
         match(tokens::TokenType::STRING_LITERAL) ||
         match(tokens::TokenType::TRUE) || match(tokens::TokenType::FALSE)) {
       auto token = tokens_.previous();
-      return std::make_shared<nodes::LiteralExpressionNode>(
+      auto expr = std::make_shared<nodes::LiteralExpressionNode>(
           token.getLocation(), token.getType(), token.getLexeme());
+          
+      // Parse any postfix operations
+      return parsePostfixOperations(expr);
     }
 
     // Handle parenthesized expressions
@@ -52,13 +58,86 @@ public:
         return nullptr;
       }
 
-      return expr;
+      // Parse any postfix operations
+      return parsePostfixOperations(expr);
     }
+    
     std::cout << "current token: " << tokens_.getCurrentToken().getLexeme()
               << std::endl;
 
     error("Expected expression");
     return nullptr;
+  }
+  
+  // Helper method to parse postfix operations like member access, array indexing, function calls
+  nodes::ExpressionPtr parsePostfixOperations(nodes::ExpressionPtr expr) {
+    while (true) {
+      // Handle member access: obj.property
+      if (match(tokens::TokenType::DOT)) {
+        if (tokens_.peek().getType() != tokens::TokenType::IDENTIFIER) {
+          error("Expected property name after '.'");
+          return nullptr;
+        }
+        
+        auto memberToken = tokens_.advance();
+        std::string memberName = memberToken.getLexeme();
+        
+        expr = std::make_shared<nodes::MemberExpressionNode>(
+          expr->getLocation(), 
+          expr,                 // object
+          memberName,           // member name
+          false                 // isPointer (false for dot notation)
+        );
+      }
+      // Handle array indexing: array[index]
+      else if (match(tokens::TokenType::LEFT_BRACKET)) {
+        auto index = parentVisitor_.parseExpression();
+        if (!index) {
+          return nullptr;
+        }
+        
+        if (!consume(tokens::TokenType::RIGHT_BRACKET, "Expected ']' after array index")) {
+          return nullptr;
+        }
+        
+        expr = std::make_shared<nodes::IndexExpressionNode>(
+          expr->getLocation(),
+          expr,                 // array
+          index                 // index expression
+        );
+      }
+      // Handle function calls: func(arg1, arg2)
+      else if (match(tokens::TokenType::LEFT_PAREN)) {
+        std::vector<nodes::ExpressionPtr> arguments;
+        
+        // Parse arguments
+        if (!check(tokens::TokenType::RIGHT_PAREN)) {
+          do {
+            auto arg = parentVisitor_.parseExpression();
+            if (!arg) {
+              return nullptr;
+            }
+            arguments.push_back(std::move(arg));
+          } while (match(tokens::TokenType::COMMA));
+        }
+        
+        if (!consume(tokens::TokenType::RIGHT_PAREN, "Expected ')' after function arguments")) {
+          return nullptr;
+        }
+        
+        expr = std::make_shared<nodes::CallExpressionNode>(
+          expr->getLocation(),
+          expr,                 // callee
+          std::move(arguments)  // arguments
+        );
+      }
+      // No more postfix operations
+      else {
+        break;
+      }
+    }
+    
+    return expr;
   }
 
 private:
