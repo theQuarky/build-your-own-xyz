@@ -348,6 +348,27 @@ private:
   std::vector<std::string> constraints_;
 };
 
+/**
+ * Labeled Statement node: loopStart: [statements]
+ */
+class LabeledStatementNode : public StatementNode {
+public:
+    LabeledStatementNode(const std::string& label, StmtPtr statement, 
+                         const core::SourceLocation& loc)
+        : StatementNode(loc), label_(label), statement_(std::move(statement)) {}
+
+    const std::string& getLabel() const { return label_; }
+    StmtPtr getStatement() const { return statement_; }
+    
+    bool accept(interface::BaseInterface* visitor) override {
+        return visitor->visitParse();
+    }
+
+private:
+    std::string label_;
+    StmtPtr statement_;
+};
+
 // Forward declarations for statement visitors
 class StmtVisitor {
 public:

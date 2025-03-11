@@ -413,7 +413,12 @@ private:
                    dynamic_cast<const nodes::ThrowStmtNode *>(stmt)) {
       visitThrowStmt(throwStmt);
     } else if(auto swithStmt = dynamic_cast<const nodes::SwitchStmtNode *>(stmt)){
+      std::cout<<"visiting switch statement\n";
       visitSwitchStmt(swithStmt);
+    } else if(auto asmStmt = dynamic_cast<const nodes::AssemblyStmtNode *>(stmt)){
+      visitAsmStmt(asmStmt);
+    } else if(auto labeledStmt = dynamic_cast<const nodes::LabeledStatementNode *>(stmt)){
+      visitLabeledStmt(labeledStmt);
     } else {
       indent();
       std::cout << RED << "Unknown statement type at "
@@ -678,6 +683,16 @@ private:
     indentLevel_--;
   }
 
+  void visitAsmStmt(const nodes::AssemblyStmtNode *node){
+    indent();
+    printLine("Assembly Statement: "+node->getCode());
+    withIndent([&](){
+      for (const auto &constraint: node->getConstraints()){
+        printLine(constraint);
+      }
+    });
+  }
+
   // Visit a unary expression (handles both prefix and postfix forms).
   void visitUnaryExpr(const nodes::UnaryExpressionNode *node) {
     indent();
@@ -699,6 +714,10 @@ private:
       if (auto varDecl = std::dynamic_pointer_cast<nodes::VarDeclNode>(
               node->getDeclaration()))
         visitVarDecl(varDecl.get());
+
+      else if(auto funcDecl = std::dynamic_pointer_cast<nodes::FunctionDeclNode>(node->getDeclaration())){
+        visitFuncDecl(funcDecl.get());
+      }
       else
         printLine("Unknown declaration type", RED);
     });
@@ -809,6 +828,17 @@ private:
     printLine("Throw " + getLocationString(node->getLocation()));
     withIndent([&]() { visitExpr(node->getValue().get()); });
   }
+
+
+// Visit labeled statement
+// Replace the broken visitLabeledStmt function with this fixed version
+void visitLabeledStmt(const nodes::LabeledStatementNode *node) {
+  printLine("Labeled Statement: " + node->getLabel() + " " + getLocationString(node->getLocation()));
+  withIndent([&]() {
+    // Assuming getStatement returns a single statement, not a collection
+    visitStmt(node->getStatement().get());
+  });
+}
 
   //---------------------------------------------------------------------------
   // Utility Functions

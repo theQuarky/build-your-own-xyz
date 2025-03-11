@@ -165,6 +165,9 @@ tokens::Token IdentifierScanner::scanAttribute() {
     type = tokens::TokenType::CONST;
   } else if (attrName == "target") {
     type = tokens::TokenType::TARGET;
+  } else if(attrName == "asm"){
+    type = tokens::TokenType::ASM;
+    return makeToken(type, start, state_->getPosition()-start);
   } else if (attrName == "aligned") {
     type = tokens::TokenType::ALIGNED;
     // Return just the 'aligned' token, let the parser handle the parentheses
