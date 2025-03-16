@@ -412,12 +412,15 @@ private:
     } else if (auto throwStmt =
                    dynamic_cast<const nodes::ThrowStmtNode *>(stmt)) {
       visitThrowStmt(throwStmt);
-    } else if(auto swithStmt = dynamic_cast<const nodes::SwitchStmtNode *>(stmt)){
-      std::cout<<"visiting switch statement\n";
+    } else if (auto swithStmt =
+                   dynamic_cast<const nodes::SwitchStmtNode *>(stmt)) {
+      std::cout << "visiting switch statement\n";
       visitSwitchStmt(swithStmt);
-    } else if(auto asmStmt = dynamic_cast<const nodes::AssemblyStmtNode *>(stmt)){
+    } else if (auto asmStmt =
+                   dynamic_cast<const nodes::AssemblyStmtNode *>(stmt)) {
       visitAsmStmt(asmStmt);
-    } else if(auto labeledStmt = dynamic_cast<const nodes::LabeledStatementNode *>(stmt)){
+    } else if (auto labeledStmt =
+                   dynamic_cast<const nodes::LabeledStatementNode *>(stmt)) {
       visitLabeledStmt(labeledStmt);
     } else {
       indent();
@@ -683,11 +686,11 @@ private:
     indentLevel_--;
   }
 
-  void visitAsmStmt(const nodes::AssemblyStmtNode *node){
+  void visitAsmStmt(const nodes::AssemblyStmtNode *node) {
     indent();
-    printLine("Assembly Statement: "+node->getCode());
-    withIndent([&](){
-      for (const auto &constraint: node->getConstraints()){
+    printLine("Assembly Statement: " + node->getCode());
+    withIndent([&]() {
+      for (const auto &constraint : node->getConstraints()) {
         printLine(constraint);
       }
     });
@@ -715,10 +718,11 @@ private:
               node->getDeclaration()))
         visitVarDecl(varDecl.get());
 
-      else if(auto funcDecl = std::dynamic_pointer_cast<nodes::FunctionDeclNode>(node->getDeclaration())){
+      else if (auto funcDecl =
+                   std::dynamic_pointer_cast<nodes::FunctionDeclNode>(
+                       node->getDeclaration())) {
         visitFuncDecl(funcDecl.get());
-      }
-      else
+      } else
         printLine("Unknown declaration type", RED);
     });
   }
@@ -779,14 +783,12 @@ private:
   // Visit switch statement
   void visitSwitchStmt(const nodes::SwitchStmtNode *node) {
     printLine("Switch " + getLocationString(node->getLocation()));
-    
+
     withIndent([&]() {
       // Print the expression being switched on
       printLine("Expression:");
-      withIndent([&]() { 
-        visitExpr(node->getExpression().get()); 
-      });
-      
+      withIndent([&]() { visitExpr(node->getExpression().get()); });
+
       // Print all the cases
       const auto &cases = node->getCases();
       if (!cases.empty()) {
@@ -799,12 +801,10 @@ private:
               printLine("Case:");
               withIndent([&]() {
                 printLine("Value:");
-                withIndent([&]() { 
-                  visitExpr(caseItem.value.get()); 
-                });
+                withIndent([&]() { visitExpr(caseItem.value.get()); });
               });
             }
-            
+
             // Print the statements in this case
             if (!caseItem.body.empty()) {
               printLine("Body:");
@@ -829,16 +829,16 @@ private:
     withIndent([&]() { visitExpr(node->getValue().get()); });
   }
 
-
-// Visit labeled statement
-// Replace the broken visitLabeledStmt function with this fixed version
-void visitLabeledStmt(const nodes::LabeledStatementNode *node) {
-  printLine("Labeled Statement: " + node->getLabel() + " " + getLocationString(node->getLocation()));
-  withIndent([&]() {
-    // Assuming getStatement returns a single statement, not a collection
-    visitStmt(node->getStatement().get());
-  });
-}
+  // Visit labeled statement
+  // Replace the broken visitLabeledStmt function with this fixed version
+  void visitLabeledStmt(const nodes::LabeledStatementNode *node) {
+    printLine("Labeled Statement: " + node->getLabel() + " " +
+              getLocationString(node->getLocation()));
+    withIndent([&]() {
+      // Assuming getStatement returns a single statement, not a collection
+      visitStmt(node->getStatement().get());
+    });
+  }
 
   //---------------------------------------------------------------------------
   // Utility Functions

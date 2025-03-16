@@ -28,9 +28,9 @@ using StmtPtr = std::shared_ptr<StatementNode>;
  * Represents a single case in a switch statement
  */
 struct SwitchCase {
-  bool isDefault;              // Whether this is a default case
-  ExpressionPtr value;         // The case expression (nullptr for default)
-  std::vector<StmtPtr> body;   // The statements in this case
+  bool isDefault;            // Whether this is a default case
+  ExpressionPtr value;       // The case expression (nullptr for default)
+  std::vector<StmtPtr> body; // The statements in this case
 
   SwitchCase(bool isDefault, ExpressionPtr value, std::vector<StmtPtr> body)
       : isDefault(isDefault), value(std::move(value)), body(std::move(body)) {}
@@ -38,18 +38,17 @@ struct SwitchCase {
 
 class DeclarationStmtNode : public StatementNode {
 public:
-    DeclarationStmtNode(DeclPtr declaration, const core::SourceLocation& loc)
-        : StatementNode(loc)
-        , declaration_(std::move(declaration)) {}
+  DeclarationStmtNode(DeclPtr declaration, const core::SourceLocation &loc)
+      : StatementNode(loc), declaration_(std::move(declaration)) {}
 
-    const DeclPtr& getDeclaration() const { return declaration_; }
-    
-    bool accept(interface::BaseInterface* visitor) override {
-        return visitor->visitParse();
-    }
+  const DeclPtr &getDeclaration() const { return declaration_; }
+
+  bool accept(interface::BaseInterface *visitor) override {
+    return visitor->visitParse();
+  }
 
 private:
-    DeclPtr declaration_;
+  DeclPtr declaration_;
 };
 
 /**
@@ -310,7 +309,7 @@ private:
 class SwitchStmtNode : public StatementNode {
 public:
   SwitchStmtNode(ExpressionPtr expression, std::vector<SwitchCase> cases,
-                const core::SourceLocation &loc)
+                 const core::SourceLocation &loc)
       : StatementNode(loc), expression_(std::move(expression)),
         cases_(std::move(cases)) {}
 

@@ -30,6 +30,26 @@ public:
 
   nodes::StmtPtr parseStatement() override {
     try {
+      if (check(tokens::TokenType::IDENTIFIER) &&
+          tokens_.peekNext().getType() == tokens::TokenType::COLON) {
+        // This is a labeled statement
+        auto label = tokens_.peek().getLexeme();
+        auto location = tokens_.peek().getLocation();
+
+        // Consume the identifier and colon
+        tokens_.advance(); // Consume identifier
+        tokens_.advance(); // Consume colon
+
+        // Parse the statement that follows the label
+        auto statement = parseStatement();
+        if (!statement)
+          return nullptr;
+
+        // Create a labeled statement node
+        return std::make_shared<nodes::LabeledStatementNode>(label, statement,
+                                                             location);
+      }
+
       if (isDeclarationStart()) {
         return parseDeclarationStatement();
       }

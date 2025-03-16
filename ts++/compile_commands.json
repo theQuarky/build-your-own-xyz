@@ -79,6 +79,36 @@
 },
 {
   "directory": "/home/hiren/build-your-own-x/ts++/build/src",
+  "command": "/usr/bin/c++  -I/home/hiren/build-your-own-x/ts++/src  -fsanitize=address -fno-omit-frame-pointer -g -std=gnu++17 -Wall -Wextra -Wpedantic -o CMakeFiles/parser.dir/parser/parser.cpp.o -c /home/hiren/build-your-own-x/ts++/src/parser/parser.cpp",
+  "file": "/home/hiren/build-your-own-x/ts++/src/parser/parser.cpp",
+  "output": "src/CMakeFiles/parser.dir/parser/parser.cpp.o"
+},
+{
+  "directory": "/home/hiren/build-your-own-x/ts++/build/src",
+  "command": "/usr/bin/c++  -I/home/hiren/build-your-own-x/ts++/src  -fsanitize=address -fno-omit-frame-pointer -g -std=gnu++17 -Wall -Wextra -Wpedantic -o CMakeFiles/parser.dir/parser/visitors/parse_visitor/base/base_parse_visitor.cpp.o -c /home/hiren/build-your-own-x/ts++/src/parser/visitors/parse_visitor/base/base_parse_visitor.cpp",
+  "file": "/home/hiren/build-your-own-x/ts++/src/parser/visitors/parse_visitor/base/base_parse_visitor.cpp",
+  "output": "src/CMakeFiles/parser.dir/parser/visitors/parse_visitor/base/base_parse_visitor.cpp.o"
+},
+{
+  "directory": "/home/hiren/build-your-own-x/ts++/build/src",
+  "command": "/usr/bin/c++  -I/home/hiren/build-your-own-x/ts++/src  -fsanitize=address -fno-omit-frame-pointer -g -std=gnu++17 -Wall -Wextra -Wpedantic -o CMakeFiles/parser.dir/parser/visitors/parse_visitor/expression/expression_parse_visitor.cpp.o -c /home/hiren/build-your-own-x/ts++/src/parser/visitors/parse_visitor/expression/expression_parse_visitor.cpp",
+  "file": "/home/hiren/build-your-own-x/ts++/src/parser/visitors/parse_visitor/expression/expression_parse_visitor.cpp",
+  "output": "src/CMakeFiles/parser.dir/parser/visitors/parse_visitor/expression/expression_parse_visitor.cpp.o"
+},
+{
+  "directory": "/home/hiren/build-your-own-x/ts++/build/src",
+  "command": "/usr/bin/c++  -I/home/hiren/build-your-own-x/ts++/src  -fsanitize=address -fno-omit-frame-pointer -g -std=gnu++17 -Wall -Wextra -Wpedantic -o CMakeFiles/parser.dir/parser/visitors/parse_visitor/declaration/declaration_parse_visitor.cpp.o -c /home/hiren/build-your-own-x/ts++/src/parser/visitors/parse_visitor/declaration/declaration_parse_visitor.cpp",
+  "file": "/home/hiren/build-your-own-x/ts++/src/parser/visitors/parse_visitor/declaration/declaration_parse_visitor.cpp",
+  "output": "src/CMakeFiles/parser.dir/parser/visitors/parse_visitor/declaration/declaration_parse_visitor.cpp.o"
+},
+{
+  "directory": "/home/hiren/build-your-own-x/ts++/build/src",
+  "command": "/usr/bin/c++  -I/home/hiren/build-your-own-x/ts++/src  -fsanitize=address -fno-omit-frame-pointer -g -std=gnu++17 -Wall -Wextra -Wpedantic -o CMakeFiles/parser.dir/parser/visitors/parse_visitor/statement/statement_parse_visitor.cpp.o -c /home/hiren/build-your-own-x/ts++/src/parser/visitors/parse_visitor/statement/statement_parse_visitor.cpp",
+  "file": "/home/hiren/build-your-own-x/ts++/src/parser/visitors/parse_visitor/statement/statement_parse_visitor.cpp",
+  "output": "src/CMakeFiles/parser.dir/parser/visitors/parse_visitor/statement/statement_parse_visitor.cpp.o"
+},
+{
+  "directory": "/home/hiren/build-your-own-x/ts++/build/src",
   "command": "/usr/bin/c++  -I/home/hiren/build-your-own-x/ts++/src  -fsanitize=address -fno-omit-frame-pointer -g -std=gnu++17 -Wall -Wextra -Wpedantic -o CMakeFiles/repl.dir/repl/repl.cpp.o -c /home/hiren/build-your-own-x/ts++/src/repl/repl.cpp",
   "file": "/home/hiren/build-your-own-x/ts++/src/repl/repl.cpp",
   "output": "src/CMakeFiles/repl.dir/repl/repl.cpp.o"
