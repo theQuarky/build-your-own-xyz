@@ -50,15 +50,10 @@ private:
   // Visitor Functions for Declaration Nodes
   //---------------------------------------------------------------------------
 
-  // Visit a class declaration node.
   void visitClassDecl(const nodes::ClassDeclNode *node) {
     printLine("ClassDecl " + getLocationString(node->getLocation()), BLUE);
-
     withIndent([&]() {
-      // Class name
       printLine("Name: '" + node->getName() + "'");
-
-      // Class modifiers if available.
       const auto &classModifiers = node->getClassModifiers();
       if (!classModifiers.empty()) {
         printLine("Class Modifiers:");
@@ -68,14 +63,10 @@ private:
           }
         });
       }
-
-      // Base class information.
       if (node->getBaseClass()) {
         printLine("Base Class:");
         withIndent([&]() { visitType(node->getBaseClass().get()); });
       }
-
-      // Implemented interfaces.
       const auto &interfaces = node->getInterfaces();
       if (!interfaces.empty()) {
         printLine("Interfaces:");
@@ -84,8 +75,6 @@ private:
             visitType(iface.get());
         });
       }
-
-      // Class members.
       const auto &members = node->getMembers();
       if (!members.empty()) {
         printLine("Members:");
@@ -97,16 +86,11 @@ private:
     });
   }
 
-  // Visit a method declaration node.
   void visitMethodDecl(const nodes::MethodDeclNode *node) {
     printLine("MethodDecl " + getLocationString(node->getLocation()), BLUE);
-
     withIndent([&]() {
-      // Access modifier and method name.
       printLine("Access: " + tokenTypeToString(node->getAccessModifier()));
       printLine("Name: '" + node->getName() + "'");
-
-      // Parameters.
       const auto &parameters = node->getParameters();
       if (!parameters.empty()) {
         printLine("Parameters:");
@@ -115,14 +99,10 @@ private:
             visitParameter(param.get());
         });
       }
-
-      // Return type.
       if (node->getReturnType()) {
         printLine("Return Type:");
         withIndent([&]() { visitType(node->getReturnType().get()); });
       }
-
-      // Throws types.
       if (!node->getThrowsTypes().empty()) {
         printLine("Throws:");
         withIndent([&]() {
@@ -130,8 +110,6 @@ private:
             visitType(throwT.get());
         });
       }
-
-      // Method modifiers.
       if (!node->getModifiers().empty()) {
         printLine("Method Modifiers:");
         withIndent([&]() {
@@ -139,8 +117,6 @@ private:
             printLine(modifierToString(mod));
         });
       }
-
-      // Method body.
       if (node->getBody()) {
         printLine("Body:");
         withIndent([&]() { visitBlock(node->getBody().get()); });
@@ -148,16 +124,11 @@ private:
     });
   }
 
-  // Visit a constructor declaration node.
   void visitConstructorDecl(const nodes::ConstructorDeclNode *node) {
     printLine("ConstructorDecl " + getLocationString(node->getLocation()),
               BLUE);
-
     withIndent([&]() {
-      // Access modifier.
       printLine("Access: " + tokenTypeToString(node->getAccessModifier()));
-
-      // Parameters.
       const auto &params = node->getParameters();
       if (!params.empty()) {
         printLine("Parameters:");
@@ -166,8 +137,6 @@ private:
             visitParameter(param.get());
         });
       }
-
-      // Constructor body.
       if (node->getBody()) {
         printLine("Body:");
         withIndent([&]() { visitBlock(node->getBody().get()); });
@@ -175,28 +144,17 @@ private:
     });
   }
 
-  // Visit a field declaration node.
   void visitFieldDecl(const nodes::FieldDeclNode *node) {
     printLine("FieldDecl " + getLocationString(node->getLocation()), GREEN);
-
     withIndent([&]() {
-      // Access modifier.
       printLine("Access: " + tokenTypeToString(node->getAccessModifier()));
-
-      // Constant qualifier.
       if (node->isConst())
         printLine("Const: true");
-
-      // Field name.
       printLine("Name: '" + node->getName() + "'");
-
-      // Field type.
       if (node->getType()) {
         printLine("Type:");
         withIndent([&]() { visitType(node->getType().get()); });
       }
-
-      // Field initializer.
       if (node->getInitializer()) {
         printLine("Initializer:");
         withIndent([&]() { visitExpr(node->getInitializer().get()); });
@@ -204,12 +162,9 @@ private:
     });
   }
 
-  // Visit a function declaration node.
   void visitFuncDecl(const nodes::FunctionDeclNode *node) {
     printLine("FunctionDecl " + getLocationString(node->getLocation()), BLUE);
-
     withIndent([&]() {
-      // Function modifiers.
       const auto &modifiers = node->getModifiers();
       if (!modifiers.empty()) {
         printLine("Modifiers:");
@@ -218,14 +173,9 @@ private:
             printLine(modifierToString(modifier));
         });
       }
-
-      // Function name.
       printLine("Name: '" + node->getName() + "'");
-
-      // Generic function specifics.
       if (auto genericFunc =
               dynamic_cast<const nodes::GenericFunctionDeclNode *>(node)) {
-        // Generic parameters.
         if (!genericFunc->getGenericParams().empty()) {
           printLine("Generic Parameters:");
           withIndent([&]() {
@@ -233,7 +183,6 @@ private:
               printLine(param->toString());
           });
         }
-        // Where constraints.
         if (!genericFunc->getConstraints().empty()) {
           printLine("Constraints:");
           withIndent([&]() {
@@ -243,21 +192,15 @@ private:
           });
         }
       }
-
-      // Function parameters.
       printLine("Parameters:");
       withIndent([&]() {
         for (const auto &param : node->getParameters())
           visitParameter(param.get());
       });
-
-      // Return type.
       if (node->getReturnType()) {
         printLine("Return Type:");
         withIndent([&]() { visitType(node->getReturnType().get()); });
       }
-
-      // Throws types.
       if (!node->getThrowsTypes().empty()) {
         printLine("Throws:");
         withIndent([&]() {
@@ -265,29 +208,20 @@ private:
             visitType(throwType.get());
         });
       }
-
-      // Function body.
       if (node->getBody()) {
         printLine("Body:");
         withIndent([&]() { visitBlock(node->getBody().get()); });
       }
-
-      // Async status.
       if (node->isAsync())
         printLine("Async: true");
     });
   }
 
-  // Visit a variable declaration node.
   void visitVarDecl(const nodes::VarDeclNode *node) {
     printLine("VarDecl", GREEN);
-
     withIndent([&]() {
-      // Variable name and location.
       printLine("Name: '" + node->getName() + "' " +
                 getLocationString(node->getLocation()));
-
-      // Storage class.
       indent();
       std::cout << "Storage: ";
       switch (node->getStorageClass()) {
@@ -305,18 +239,12 @@ private:
         break;
       }
       std::cout << "\n";
-
-      // Constant qualifier.
       if (node->isConst())
         printLine("Qualifier: const");
-
-      // Type information.
       if (node->getType()) {
         printLine("Type:");
         withIndent([&]() { visitType(node->getType().get()); });
       }
-
-      // Attributes.
       const auto &attributes = node->getAttributes();
       if (!attributes.empty()) {
         printLine("Attributes:");
@@ -325,8 +253,6 @@ private:
             visitAttribute(attr.get());
         });
       }
-
-      // Initializer.
       if (node->getInitializer()) {
         printLine("Initializer:");
         withIndent([&]() { visitExpr(node->getInitializer().get()); });
@@ -334,25 +260,19 @@ private:
     });
   }
 
-  // Visit a parameter node.
   void visitParameter(const nodes::ParameterNode *node) {
     printLine("Parameter '" + node->getName() + "' " +
                   getLocationString(node->getLocation()),
               YELLOW);
-
     withIndent([&]() {
-      // Parameter type.
       if (node->getType()) {
         printLine("Type:");
         withIndent([&]() { visitType(node->getType().get()); });
       }
-      // Modifiers.
       if (node->isRef())
         printLine("Modifier: ref");
       if (node->isConst())
         printLine("Modifier: const");
-
-      // Default value.
       if (node->getDefaultValue()) {
         printLine("Default Value:");
         withIndent([&]() { visitExpr(node->getDefaultValue().get()); });
@@ -364,7 +284,6 @@ private:
   // Visitor Functions for Statement and Expression Nodes
   //---------------------------------------------------------------------------
 
-  // Visit a block statement.
   void visitBlock(const nodes::BlockNode *node) {
     printLine("Block " + getLocationString(node->getLocation()));
     withIndent([&]() {
@@ -373,14 +292,11 @@ private:
     });
   }
 
-  // Dispatch a statement node to the proper visitor.
   void visitStmt(const nodes::StatementNode *stmt) {
     if (!stmt) {
       printLine("null-statement", RED);
       return;
     }
-
-    // Dispatch based on dynamic type.
     if (auto exprStmt = dynamic_cast<const nodes::ExpressionStmtNode *>(stmt))
       visitExprStmt(exprStmt);
     else if (auto returnStmt =
@@ -407,15 +323,14 @@ private:
     else if (auto continueStmt =
                  dynamic_cast<const nodes::ContinueStmtNode *>(stmt))
       visitContinueStmt(continueStmt);
-    else if (auto tryStmt = dynamic_cast<const nodes::TryStmtNode *>(stmt)) {
+    else if (auto tryStmt = dynamic_cast<const nodes::TryStmtNode *>(stmt))
       visitTryStmt(tryStmt);
-    } else if (auto throwStmt =
-                   dynamic_cast<const nodes::ThrowStmtNode *>(stmt)) {
+    else if (auto throwStmt = dynamic_cast<const nodes::ThrowStmtNode *>(stmt))
       visitThrowStmt(throwStmt);
-    } else if (auto swithStmt =
-                   dynamic_cast<const nodes::SwitchStmtNode *>(stmt)) {
+    else if (auto switchStmt =
+                 dynamic_cast<const nodes::SwitchStmtNode *>(stmt)) {
       std::cout << "visiting switch statement\n";
-      visitSwitchStmt(swithStmt);
+      visitSwitchStmt(switchStmt);
     } else if (auto asmStmt =
                    dynamic_cast<const nodes::AssemblyStmtNode *>(stmt)) {
       visitAsmStmt(asmStmt);
@@ -431,13 +346,11 @@ private:
     }
   }
 
-  // Visit an expression statement.
   void visitExprStmt(const nodes::ExpressionStmtNode *node) {
     printLine("ExpressionStatement " + getLocationString(node->getLocation()));
     withIndent([&]() { visitExpr(node->getExpression().get()); });
   }
 
-  // Visit an attribute node.
   void visitAttribute(const nodes::AttributeNode *node) {
     indent();
     std::cout << "Attribute: " << node->getName();
@@ -449,13 +362,13 @@ private:
     std::cout << "\n";
   }
 
-  // Visit an expression node.
+  // Updated visitExpr to properly output assignment targets (especially
+  // MemberAccess).
   void visitExpr(const nodes::ExpressionNode *expr) {
     if (!expr) {
       printLine("null-expression", RED);
       return;
     }
-
     // Literal expression.
     if (auto literal =
             dynamic_cast<const nodes::LiteralExpressionNode *>(expr)) {
@@ -483,6 +396,20 @@ private:
       indent();
       std::cout << "Identifier: '" << ident->getName() << "' "
                 << getLocationString(ident->getLocation()) << "\n";
+    }
+    // Member access expression.
+    else if (auto member =
+                 dynamic_cast<const nodes::MemberExpressionNode *>(expr)) {
+      indent();
+      std::cout << "MemberAccess: ";
+      // If the object is 'this', print it directly.
+      if (dynamic_cast<const nodes::ThisExpressionNode *>(
+              member->getObject().get()))
+        std::cout << "this";
+      else
+        visitExpr(member->getObject().get());
+      std::cout << "." << member->getMember() << " "
+                << getLocationString(member->getLocation()) << "\n";
     }
     // Assignment expression.
     else if (auto assign =
@@ -515,18 +442,14 @@ private:
     }
   }
 
-  // Visit a type node.
   void visitType(const nodes::TypeNode *type) {
     if (!type) {
       printLine("null-type", RED);
       return;
     }
-
     indent();
     std::cout << type->toString() << "\n";
-
     withIndent([&]() {
-      // Array type: print element type and size.
       if (auto arrType = dynamic_cast<const nodes::ArrayTypeNode *>(type)) {
         printLine("ElementType:");
         withIndent([&]() { visitType(arrType->getElementType().get()); });
@@ -534,17 +457,14 @@ private:
           printLine("Size:");
           withIndent([&]() { visitExpr(arrType->getSize().get()); });
         }
-      }
-      // Pointer type: print base type.
-      else if (auto ptrType =
-                   dynamic_cast<const nodes::PointerTypeNode *>(type)) {
+      } else if (auto ptrType =
+                     dynamic_cast<const nodes::PointerTypeNode *>(type)) {
         printLine("BaseType:");
         withIndent([&]() { visitType(ptrType->getBaseType().get()); });
       }
     });
   }
 
-  // Visit a while statement.
   void visitWhileStmt(const nodes::WhileStmtNode *node) {
     printLine("While " + getLocationString(node->getLocation()));
     withIndent([&]() {
@@ -555,7 +475,6 @@ private:
     });
   }
 
-  // Visit a do-while statement.
   void visitDoWhileStmt(const nodes::DoWhileStmtNode *node) {
     printLine("DoWhile " + getLocationString(node->getLocation()));
     withIndent([&]() {
@@ -566,7 +485,6 @@ private:
     });
   }
 
-  // Visit a break statement.
   void visitBreakStmt(const nodes::BreakStmtNode *node) {
     indent();
     std::cout << "Break";
@@ -575,7 +493,6 @@ private:
     std::cout << " " << getLocationString(node->getLocation()) << "\n";
   }
 
-  // Visit a continue statement.
   void visitContinueStmt(const nodes::ContinueStmtNode *node) {
     indent();
     std::cout << "Continue";
@@ -584,7 +501,6 @@ private:
     std::cout << " " << getLocationString(node->getLocation()) << "\n";
   }
 
-  // Visit a return statement.
   void visitReturnStmt(const nodes::ReturnStmtNode *node) {
     printLine("Return " + getLocationString(node->getLocation()));
     if (node->getValue()) {
@@ -592,7 +508,6 @@ private:
     }
   }
 
-  // Visit an if statement.
   void visitIfStmt(const nodes::IfStmtNode *node) {
     printLine("If " + getLocationString(node->getLocation()));
     withIndent([&]() {
@@ -607,11 +522,9 @@ private:
     });
   }
 
-  // Visit a for loop statement.
   void visitForStmt(const nodes::ForStmtNode *node) {
     printLine("For " + getLocationString(node->getLocation()));
     withIndent([&]() {
-      // Initializer.
       printLine("Initializer:");
       withIndent([&]() {
         if (node->getInitializer())
@@ -619,7 +532,6 @@ private:
         else
           printLine("<empty>");
       });
-      // Condition.
       printLine("Condition:");
       withIndent([&]() {
         if (node->getCondition())
@@ -627,7 +539,6 @@ private:
         else
           printLine("<empty>");
       });
-      // Increment.
       printLine("Increment:");
       withIndent([&]() {
         if (node->getIncrement())
@@ -635,18 +546,15 @@ private:
         else
           printLine("<empty>");
       });
-      // Body.
       printLine("Body:");
       withIndent([&]() { visitStmt(node->getBody().get()); });
     });
   }
 
-  // Visit a for-of loop statement.
   void visitArrayLiteral(const nodes::ArrayLiteralNode *node) {
     indent();
     std::cout << "ArrayLiteral " << getLocationString(node->getLocation())
               << "\n";
-
     indentLevel_++;
     indent();
     std::cout << "Elements:\n";
@@ -661,28 +569,20 @@ private:
   void visitForOfStmt(const nodes::ForOfStmtNode *node) {
     indent();
     std::cout << "ForOf " << getLocationString(node->getLocation()) << "\n";
-
     indentLevel_++;
-
-    // Print variable declaration info
     indent();
     std::cout << (node->isConst() ? "const " : "let ") << node->getIdentifier()
               << "\n";
-
-    // Print iterable
     indent();
     std::cout << "Iterable:\n";
     indentLevel_++;
     visitExpr(node->getIterable().get());
     indentLevel_--;
-
-    // Print body
     indent();
     std::cout << "Body:\n";
     indentLevel_++;
     visitStmt(node->getBody().get());
     indentLevel_--;
-
     indentLevel_--;
   }
 
@@ -696,7 +596,6 @@ private:
     });
   }
 
-  // Visit a unary expression (handles both prefix and postfix forms).
   void visitUnaryExpr(const nodes::UnaryExpressionNode *node) {
     indent();
     std::cout << "UnaryExpression "
@@ -709,7 +608,6 @@ private:
     });
   }
 
-  // Visit a declaration statement.
   void visitDeclStmt(const nodes::DeclarationStmtNode *node) {
     printLine("Declaration Statement " +
               getLocationString(node->getLocation()));
@@ -717,24 +615,20 @@ private:
       if (auto varDecl = std::dynamic_pointer_cast<nodes::VarDeclNode>(
               node->getDeclaration()))
         visitVarDecl(varDecl.get());
-
       else if (auto funcDecl =
                    std::dynamic_pointer_cast<nodes::FunctionDeclNode>(
-                       node->getDeclaration())) {
+                       node->getDeclaration()))
         visitFuncDecl(funcDecl.get());
-      } else
+      else
         printLine("Unknown declaration type", RED);
     });
   }
-  // Visit a try statement
+
   void visitTryStmt(const nodes::TryStmtNode *node) {
     printLine("Try " + getLocationString(node->getLocation()));
     withIndent([&]() {
-      // Print try block
       printLine("Try Block:");
       withIndent([&]() { visitStmt(node->getTryBlock().get()); });
-
-      // Print catch clauses
       const auto &catchClauses = node->getCatchClauses();
       if (!catchClauses.empty()) {
         printLine("Catch Clauses:");
@@ -752,8 +646,6 @@ private:
           }
         });
       }
-
-      // Print finally block if present
       if (node->getFinallyBlock()) {
         printLine("Finally Block:");
         withIndent([&]() { visitStmt(node->getFinallyBlock().get()); });
@@ -761,12 +653,10 @@ private:
     });
   }
 
-  // Visit new expression
   void visitNewExpr(const nodes::NewExpressionNode *node) {
     indent();
     std::cout << "NewExpression: " << node->getClassName() << " "
               << getLocationString(node->getLocation()) << "\n";
-
     withIndent([&]() {
       const auto &args = node->getArguments();
       if (!args.empty()) {
@@ -780,16 +670,11 @@ private:
     });
   }
 
-  // Visit switch statement
   void visitSwitchStmt(const nodes::SwitchStmtNode *node) {
     printLine("Switch " + getLocationString(node->getLocation()));
-
     withIndent([&]() {
-      // Print the expression being switched on
       printLine("Expression:");
       withIndent([&]() { visitExpr(node->getExpression().get()); });
-
-      // Print all the cases
       const auto &cases = node->getCases();
       if (!cases.empty()) {
         printLine("Cases:");
@@ -804,8 +689,6 @@ private:
                 withIndent([&]() { visitExpr(caseItem.value.get()); });
               });
             }
-
-            // Print the statements in this case
             if (!caseItem.body.empty()) {
               printLine("Body:");
               withIndent([&]() {
@@ -820,31 +703,23 @@ private:
     });
   }
 
-  // Visit cases
-  void visitCase(const nodes::CastExpressionNode) {}
+  // (Removed unused visitCase stub)
 
-  // Visit a throw statement
   void visitThrowStmt(const nodes::ThrowStmtNode *node) {
     printLine("Throw " + getLocationString(node->getLocation()));
     withIndent([&]() { visitExpr(node->getValue().get()); });
   }
 
-  // Visit labeled statement
-  // Replace the broken visitLabeledStmt function with this fixed version
   void visitLabeledStmt(const nodes::LabeledStatementNode *node) {
     printLine("Labeled Statement: " + node->getLabel() + " " +
               getLocationString(node->getLocation()));
-    withIndent([&]() {
-      // Assuming getStatement returns a single statement, not a collection
-      visitStmt(node->getStatement().get());
-    });
+    withIndent([&]() { visitStmt(node->getStatement().get()); });
   }
 
   //---------------------------------------------------------------------------
   // Utility Functions
   //---------------------------------------------------------------------------
 
-  // Convert a token type to its corresponding string representation.
   static std::string tokenTypeToString(tokens::TokenType type) {
     switch (type) {
     case tokens::TokenType::PLUS:
@@ -916,7 +791,6 @@ private:
     }
   }
 
-  // Convert a modifier token to its string representation.
   std::string modifierToString(tokens::TokenType modifier) {
     switch (modifier) {
     case tokens::TokenType::INLINE:
@@ -933,7 +807,6 @@ private:
   }
 
 public:
-  // Print the entire AST from a given AST object.
   void print(const parser::AST &ast) {
     std::cout << "\nAbstract Syntax Tree:\n" << std::string(80, '-') << "\n";
     const auto &nodes = ast.getNodes();
@@ -942,7 +815,6 @@ public:
       return;
     }
     for (const auto &node : nodes) {
-      // Dispatch based on node type.
       if (auto classDecl =
               std::dynamic_pointer_cast<nodes::ClassDeclNode>(node))
         visitClassDecl(classDecl.get());
@@ -961,7 +833,6 @@ public:
       else if (auto varDecl =
                    std::dynamic_pointer_cast<nodes::VarDeclNode>(node))
         visitVarDecl(varDecl.get());
-      // Handle statements and expressions.
       else if (auto stmt =
                    std::dynamic_pointer_cast<nodes::StatementNode>(node))
         visitStmt(stmt.get());
@@ -984,13 +855,11 @@ public:
     std::cout << std::string(80, '-') << "\n";
   }
 
-  // Print a single node.
   void print(const nodes::NodePtr &node) {
     if (!node) {
       printLine("nullptr", RED);
       return;
     }
-    // Dispatch based on node type.
     if (auto classDecl = std::dynamic_pointer_cast<nodes::ClassDeclNode>(node))
       visitClassDecl(classDecl.get());
     else if (auto methodDecl =

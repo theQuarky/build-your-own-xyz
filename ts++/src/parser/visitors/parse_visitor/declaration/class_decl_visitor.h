@@ -39,6 +39,7 @@ public:
       error("Expected class name");
       return nullptr;
     }
+
     auto name = tokens_.previous().getLexeme();
 
     // Parse inheritance
@@ -51,6 +52,7 @@ public:
 
     // Parse implemented interfaces
     std::vector<nodes::TypePtr> interfaces;
+
     if (match(tokens::TokenType::IMPLEMENTS)) {
       do {
         auto interface = declVisitor_.parseType();
@@ -70,26 +72,12 @@ public:
     std::vector<nodes::DeclPtr> members;
     while (!check(tokens::TokenType::RIGHT_BRACE) && !tokens_.isAtEnd()) {
       if (auto member = parseMemberDecl()) {
-        std::cout << "next token: " << tokens_.peek().getLexeme()
-                  << ", type: " << static_cast<int>(tokens_.peek().getType())
-                  << std::endl;
         members.push_back(std::move(member));
       } else {
-        std::cout << "next token: " << tokens_.peek().getLexeme()
-                  << ", type: " << static_cast<int>(tokens_.peek().getType())
-                  << std::endl;
         synchronize();
       }
     }
 
-    std::cout << "Before final consume - token: "
-              << (tokens_.isAtEnd() ? "END" : tokens_.peek().getLexeme())
-              << std::endl;
-    // Consume the closing brace
-    if (!consume(tokens::TokenType::RIGHT_BRACE,
-                 "Expected '}' after class body")) {
-      return nullptr;
-    }
 
     return std::make_shared<nodes::ClassDeclNode>(
         name, std::move(modifiers), std::move(baseClass), std::move(interfaces),

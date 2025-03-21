@@ -195,6 +195,9 @@ class ThisExpressionNode : public ExpressionNode {
 public:
   explicit ThisExpressionNode(const core::SourceLocation &loc)
       : ExpressionNode(loc, tokens::TokenType::THIS) {}
+  bool accept(interface::BaseInterface *visitor) override {
+    return visitor->visitParse();
+  }
 };
 
 // New expression (new Type(args))
