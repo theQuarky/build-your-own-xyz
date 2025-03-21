@@ -68,8 +68,6 @@ public:
       return parsePostfixOperations(expr);
     }
 
-    std::cout << "current token: " << tokens_.getCurrentToken().getLexeme()
-              << std::endl;
     error("Expected expression");
     return nullptr;
   }

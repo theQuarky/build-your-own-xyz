@@ -1,5 +1,6 @@
 #include "declaration_parse_visitor.h"
 #include "parser/visitors/parse_visitor/expression/iexpression_visitor.h"
+#include "tokens/token_type.h"
 #include <cassert>
 #include <iostream>
 #include <ostream>
@@ -13,7 +14,8 @@ DeclarationParseVisitor::DeclarationParseVisitor(
       stmtVisitor_(stmtVisitor),
       varDeclVisitor_(tokens, errorReporter, exprVisitor, *this),
       funcDeclVisitor_(tokens, errorReporter, exprVisitor, *this, stmtVisitor),
-      classDeclVisitor_(tokens, errorReporter, *this, exprVisitor, stmtVisitor) {
+      classDeclVisitor_(tokens, errorReporter, *this, exprVisitor,
+                        stmtVisitor) {
   // assert(&tokens != nullptr && "Token stream cannot be null");
   // assert(&errorReporter != nullptr && "Error reporter cannot be null");
 }
@@ -42,12 +44,14 @@ nodes::DeclPtr DeclarationParseVisitor::parseDeclaration() {
       return funcDecl;
     }
     std::vector<tokens::TokenType> classModifiers;
-    parseFunctionModifiers(classModifiers);
-
+    parseClassModifiers(classModifiers);
     if (check(tokens::TokenType::CLASS)) {
       auto classDecl = classDeclVisitor_.parseClassDecl(classModifiers);
-      if (!classDecl)
+
+      if (!classDecl) {
+        std::cout << "class declaration: " << classDecl.get() << std::endl;
         return nullptr;
+      }
       return classDecl;
     }
 
@@ -122,7 +126,7 @@ bool DeclarationParseVisitor::parseFunctionModifiers(
 bool DeclarationParseVisitor::parseClassModifiers(
     std::vector<tokens::TokenType> &modifiers) {
   while (true) {
-    auto token = tokens_.peek();
+    auto token = tokens_.getCurrentToken();
     tokens::TokenType type = token.getType();
 
     // Check for function modifiers tokens directly

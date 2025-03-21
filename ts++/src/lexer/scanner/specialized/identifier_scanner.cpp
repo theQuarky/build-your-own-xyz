@@ -69,7 +69,8 @@ const std::unordered_map<std::string, tokens::TokenType> &getKeywordMapImpl() {
       {"#unsafe", tokens::TokenType::UNSAFE},
       {"#simd", tokens::TokenType::SIMD},
       {"#target", tokens::TokenType::TARGET},
-  };
+      {"#packed", tokens::TokenType::PACKED},
+      {"#abstract", tokens::TokenType::ABSTRACT}};
   return keywords;
 }
 } // namespace
@@ -165,9 +166,13 @@ tokens::Token IdentifierScanner::scanAttribute() {
     type = tokens::TokenType::CONST;
   } else if (attrName == "target") {
     type = tokens::TokenType::TARGET;
-  } else if(attrName == "asm"){
+  } else if (attrName == "asm") {
     type = tokens::TokenType::ASM;
-    return makeToken(type, start, state_->getPosition()-start);
+    return makeToken(type, start, state_->getPosition() - start);
+  } else if (attrName == "packed") {
+    type = tokens::TokenType::PACKED;
+  } else if (attrName == "abstract") {
+    type = tokens::TokenType::ABSTRACT;
   } else if (attrName == "aligned") {
     type = tokens::TokenType::ALIGNED;
     // Return just the 'aligned' token, let the parser handle the parentheses

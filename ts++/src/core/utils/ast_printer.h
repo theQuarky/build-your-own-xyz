@@ -786,6 +786,12 @@ private:
       return "#unsafe";
     case tokens::TokenType::SIMD:
       return "#simd";
+    case tokens::TokenType::PACKED:
+      return "#packed";
+    case tokens::TokenType::ABSTRACT:
+      return "#abstract";
+    case tokens::TokenType::ALIGNED:
+      return "#aligned";
     default:
       return std::to_string(static_cast<int>(type));
     }

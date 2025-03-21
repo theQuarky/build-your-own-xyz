@@ -1,5 +1,6 @@
 // base_parse_visitor.cpp
 #include "base_parse_visitor.h"
+#include "tokens/token_type.h"
 
 namespace visitors {
 
@@ -66,6 +67,9 @@ bool BaseParseVisitor::isDeclarationStart() const {
   return tokens_.check(tokens::TokenType::STACK) ||
          tokens_.check(tokens::TokenType::HEAP) ||
          tokens_.check(tokens::TokenType::STATIC) ||
+         tokens_.check(tokens::TokenType::PACKED) ||
+         tokens_.check(tokens::TokenType::ALIGNED) ||
+         tokens_.check(tokens::TokenType::ABSTRACT) ||
          tokens_.check(tokens::TokenType::ATTRIBUTE) ||
          tokens_.check(tokens::TokenType::LET) ||
          tokens_.check(tokens::TokenType::CONST) ||
