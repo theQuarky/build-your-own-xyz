@@ -22,6 +22,8 @@ enum class TokenType {
   NAMESPACE,        // 'namespace' keyword for namespace declarations
   TEMPLATE,         // 'template' keyword for template declarations
   NEW,              // 'new' keyword to create new class instance
+  GET,
+  SET,
   DECL_END = NEW,
 
   /*****************************************************************************

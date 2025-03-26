@@ -204,6 +204,26 @@ private:
   std::vector<DeclPtr> members_;    // Class members
 };
 
+class GenericClassDeclNode : public ClassDeclNode {
+public:
+  GenericClassDeclNode(const std::string &name,
+                       std::vector<tokens::TokenType> classModifiers,
+                       TypePtr baseClass, std::vector<TypePtr> interfaces,
+                       std::vector<DeclPtr> members,
+                       std::vector<TypePtr> genericParams,
+                       const core::SourceLocation &loc)
+      : ClassDeclNode(name, std::move(classModifiers), std::move(baseClass),
+                      std::move(interfaces), std::move(members), loc),
+        genericParams_(std::move(genericParams)) {}
+
+  const std::vector<TypePtr> &getGenericParams() const {
+    return genericParams_;
+  }
+
+private:
+  std::vector<TypePtr> genericParams_;
+};
+
 class ConstructorDeclNode : public DeclarationNode {
 public:
   ConstructorDeclNode(tokens::TokenType accessModifier,

@@ -6,6 +6,7 @@
 
 #include "token_stream.h"
 #include "core/common/common_types.h"
+#include <iostream>
 
 namespace tokens {
 
@@ -24,9 +25,12 @@ TokenStream::TokenStream(std::vector<Token> tokens)
 /*****************************************************************************
  * Token Access Methods
  *****************************************************************************/
+
 const Token &TokenStream::peek() const {
-  // Return EOF token if beyond stream bounds
-  if (current_ >= tokens_.size()) {
+  // If at end or beyond, return the EOF token
+  if (current_ >= tokens_.size() ||
+      (current_ < tokens_.size() &&
+       tokens_[current_].getType() == TokenType::END_OF_FILE)) {
     return tokens_.back();
   }
   return tokens_[current_];
@@ -46,35 +50,44 @@ const Token &TokenStream::peekNext(int n) const {
 
 const Token &TokenStream::previous() const {
   // Handle boundary cases
-  if (current_ == 0) {
+  if (current_ <= 0) {
     return tokens_[0]; // At start: return first token
   }
   if (current_ >= tokens_.size()) {
-    return tokens_.back(); // Beyond end: return EOF
+    return tokens_[tokens_.size() - 2]; // Return last real token, not EOF
   }
   return tokens_[current_ - 1];
 }
 
 Token TokenStream::advance() {
-  // Move forward unless at end
-  if (!isAtEnd()) {
-    current_++;
+  // If already at end, don't advance further
+  if (isAtEnd()) {
+    return tokens_.back();
   }
-  return previous();
+
+  // Otherwise, move forward and return the token we were at
+  Token token = tokens_[current_];
+  current_++;
+  return token;
 }
 
 /*****************************************************************************
  * Stream State Methods
  *****************************************************************************/
+
 bool TokenStream::isAtEnd() const {
+  // Simple end check: either we're at the EOF token or beyond bounds
   return current_ >= tokens_.size() - 1 ||
-         tokens_[current_].getType() == TokenType::END_OF_FILE;
+         (current_ < tokens_.size() &&
+          tokens_[current_].getType() == TokenType::END_OF_FILE);
 }
 
 bool TokenStream::check(TokenType type) const {
-  if (isAtEnd()) {
-    return false;
+  // Explicitly check for EOF case
+  if (current_ >= tokens_.size()) {
+    return type == TokenType::END_OF_FILE;
   }
+
   return peek().getType() == type;
 }
 
@@ -101,18 +114,29 @@ bool TokenStream::matchAny(const std::vector<TokenType> &types) {
  *****************************************************************************/
 void TokenStream::setPosition(size_t position) {
   // Ensure position stays within valid bounds
-  if (position < tokens_.size()) {
+  if (position < tokens_.size() - 1) { // Subtract 1 to avoid EOF
     current_ = position;
   } else {
-    current_ = tokens_.size() - 1; // Clamp to last valid position
+    current_ = tokens_.size() - 2; // Set to last real token, not EOF
   }
 }
+
+size_t TokenStream::getCurrentPosition() const { return current_; }
+
+// New method: Save current position
+size_t TokenStream::savePosition() const { return current_; }
+
+// New method: Restore saved position
+void TokenStream::restorePosition(size_t position) { setPosition(position); }
 
 /*****************************************************************************
  * Error Recovery
  *****************************************************************************/
 void TokenStream::synchronize() {
-  advance(); // Skip the token where error occurred
+  // Skip the token where error occurred, if not at end
+  if (!isAtEnd()) {
+    advance();
+  }
 
   // Continue until we find a synchronization point
   while (!isAtEnd()) {
@@ -123,17 +147,25 @@ void TokenStream::synchronize() {
 
     // Or at the start of major declarations/statements
     switch (peek().getType()) {
-    case TokenType::FUNCTION: // Function declaration
-    case TokenType::LET:      // Variable declaration
-    case TokenType::FOR:      // For loop
-    case TokenType::IF:       // If statement
-    case TokenType::WHILE:    // While loop
-    case TokenType::RETURN:   // Return statement
+    case TokenType::FUNCTION:    // Function declaration
+    case TokenType::LET:         // Variable declaration
+    case TokenType::FOR:         // For loop
+    case TokenType::IF:          // If statement
+    case TokenType::WHILE:       // While loop
+    case TokenType::RETURN:      // Return statement
+    case TokenType::RIGHT_BRACE: // End of block - added for better recovery
       return;
     default:
       advance(); // Skip tokens until sync point found
     }
   }
+}
+
+Token TokenStream::getCurrentToken() {
+  if (current_ < tokens_.size()) {
+    return tokens_[current_];
+  }
+  return tokens_.back(); // Return EOF if beyond bounds
 }
 
 } // namespace tokens

@@ -64,6 +64,8 @@ const std::unordered_map<std::string, tokens::TokenType> &getKeywordMapImpl() {
       {"ref", tokens::TokenType::REF},
       {"where", tokens::TokenType::WHERE},
       {"throws", tokens::TokenType::THROWS},
+      {"get", tokens::TokenType::GET},
+      {"set", tokens::TokenType::SET},
       {"#inline", tokens::TokenType::INLINE},
       {"#virtual", tokens::TokenType::VIRTUAL},
       {"#unsafe", tokens::TokenType::UNSAFE},

@@ -63,6 +63,25 @@ private:
           }
         });
       }
+      if (auto genericClass =
+              dynamic_cast<const nodes::GenericClassDeclNode *>(node)) {
+        if (!genericClass->getGenericParams().empty()) {
+          printLine("Generic Parameters:");
+          withIndent([&]() {
+            for (const auto &param : genericClass->getGenericParams())
+              printLine(param->toString());
+          });
+        }
+        // if (!genericClass->getConstraints().empty()) {
+        //   printLine("Constraints:");
+        //   withIndent([&]() {
+        //     for (const auto &[paramName, constraint] :
+        //          genericFunc->getConstraints())
+        //       printLine(paramName + ": " + constraint->toString());
+        //   });
+        // }
+      }
+
       if (node->getBaseClass()) {
         printLine("Base Class:");
         withIndent([&]() { visitType(node->getBaseClass().get()); });

@@ -15,14 +15,57 @@ DeclarationParseVisitor::DeclarationParseVisitor(
       varDeclVisitor_(tokens, errorReporter, exprVisitor, *this),
       funcDeclVisitor_(tokens, errorReporter, exprVisitor, *this, stmtVisitor),
       classDeclVisitor_(tokens, errorReporter, *this, exprVisitor,
-                        stmtVisitor) {
-  // assert(&tokens != nullptr && "Token stream cannot be null");
-  // assert(&errorReporter != nullptr && "Error reporter cannot be null");
-}
+                        stmtVisitor) {}
 
 nodes::DeclPtr DeclarationParseVisitor::parseDeclaration() {
   try {
     auto location = tokens_.peek().getLocation();
+
+    // Check for access modifiers first (for class members)
+    tokens::TokenType accessModifier = tokens::TokenType::ERROR_TOKEN;
+    if (check(tokens::TokenType::PUBLIC) || check(tokens::TokenType::PRIVATE) ||
+        check(tokens::TokenType::PROTECTED)) {
+      accessModifier = tokens_.peek().getType();
+      tokens_.advance(); // Consume the access modifier
+
+      // After access modifier, check for specific member types
+      if (check(tokens::TokenType::FUNCTION)) {
+        // Method declaration
+        return classDeclVisitor_.parseMethod(accessModifier);
+      } else if (check(tokens::TokenType::GET)) {
+        // Property getter
+        return classDeclVisitor_.parsePropertyGetter(accessModifier);
+      } else if (check(tokens::TokenType::SET)) {
+        // Property setter
+        return classDeclVisitor_.parsePropertySetter(accessModifier);
+      } else if (check(tokens::TokenType::LET) ||
+                 check(tokens::TokenType::CONST)) {
+        // Field declaration
+        bool isConst = tokens_.peek().getType() == tokens::TokenType::CONST;
+        tokens_.advance(); // Consume let/const
+        return classDeclVisitor_.parseField(accessModifier, isConst);
+      } else {
+        error("Expected class member declaration after access modifier");
+        return nullptr;
+      }
+    }
+
+    // Check for constructor
+    if (check(tokens::TokenType::CONSTRUCTOR)) {
+      return classDeclVisitor_.parseConstructor(
+          tokens::TokenType::PUBLIC); // Default to public
+    }
+
+    // Check for property getter/setter without access modifier
+    if (check(tokens::TokenType::GET)) {
+      return classDeclVisitor_.parsePropertyGetter(
+          tokens::TokenType::PUBLIC); // Default to public
+    }
+
+    if (check(tokens::TokenType::SET)) {
+      return classDeclVisitor_.parsePropertySetter(
+          tokens::TokenType::PUBLIC); // Default to public
+    }
 
     // Parse storage modifiers (#heap, #stack, #static)
     tokens::TokenType storageClass = tokens::TokenType::ERROR_TOKEN;
@@ -43,6 +86,7 @@ nodes::DeclPtr DeclarationParseVisitor::parseDeclaration() {
         return nullptr;
       return funcDecl;
     }
+
     std::vector<tokens::TokenType> classModifiers;
     parseClassModifiers(classModifiers);
     if (check(tokens::TokenType::CLASS)) {
@@ -203,7 +247,7 @@ nodes::TypePtr DeclarationParseVisitor::parseSmartPointerType(
   }
 
   // Parse the type argument
-  auto pointeeType = parseType(); // Changed from parsePrimaryType to parseType
+  auto pointeeType = parseType();
   if (!pointeeType)
     return nullptr;
 
@@ -334,29 +378,6 @@ nodes::TypePtr DeclarationParseVisitor::parseTemplateType(
 nodes::BlockPtr DeclarationParseVisitor::parseBlock() {
   return stmtVisitor_.parseBlock();
 }
-
-// Helper method to parse basic types
-// nodes::TypePtr DeclarationParseVisitor::parsePrimaryType() {
-//     auto location = tokens_.peek().getLocation();
-
-//     // Handle primitive types
-//     if (tokens::TokenType::TYPE_BEGIN <= tokens_.peek().getType() &&
-//         tokens_.peek().getType() <= tokens::TokenType::TYPE_END) {
-//         auto type = tokens_.peek().getType();
-//         tokens_.advance();
-//         return std::make_shared<nodes::PrimitiveTypeNode>(type, location);
-//     }
-//     // Handle user-defined types (identifiers)
-//     else if (check(tokens::TokenType::IDENTIFIER)) {
-//         auto name = tokens_.peek().getLexeme();
-//         tokens_.advance();
-//         return std::make_shared<nodes::NamedTypeNode>(name, location);
-//     }
-//     else {
-//         error("Expected type name");
-//         return nullptr;
-//     }
-// }
 
 tokens::TokenType DeclarationParseVisitor::parseStorageClass() {
   if (!check(tokens::TokenType::ATTRIBUTE)) {

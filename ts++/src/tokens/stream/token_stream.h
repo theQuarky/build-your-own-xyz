@@ -90,7 +90,7 @@ public:
    * @brief Get current position in token stream
    * @return Current token index
    */
-  size_t getCurrentPosition() const { return current_; }
+  size_t getCurrentPosition() const;
 
   /**
    * @brief Set position in token stream
@@ -98,6 +98,18 @@ public:
    * @note Clamps to valid range
    */
   void setPosition(size_t position);
+
+  /**
+   * @brief Save current position for later restoration
+   * @return Current position index
+   */
+  size_t savePosition() const;
+
+  /**
+   * @brief Restore previously saved position
+   * @param position Previously saved position
+   */
+  void restorePosition(size_t position);
 
   /**
    * @brief Check if current token matches type without consuming
@@ -109,7 +121,7 @@ public:
   /*
    * return current token
    */
-  Token getCurrentToken() { return tokens_[current_]; }
+  Token getCurrentToken();
 
 private:
   std::vector<Token> tokens_; ///< Storage for token sequence
