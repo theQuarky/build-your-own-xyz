@@ -129,10 +129,19 @@ private:
   }
 
   bool isDeclarationStart() const {
+    // Check for class-related declarations too
     return check(tokens::TokenType::LET) || check(tokens::TokenType::CONST) ||
            check(tokens::TokenType::FUNCTION) ||
+           check(tokens::TokenType::CLASS) ||       // Added CLASS
+           check(tokens::TokenType::CONSTRUCTOR) || // Added CONSTRUCTOR
+           check(tokens::TokenType::PUBLIC) ||      // Added access modifiers
+           check(tokens::TokenType::PRIVATE) ||
+           check(tokens::TokenType::PROTECTED) ||
            check(tokens::TokenType::STACK) || check(tokens::TokenType::HEAP) ||
-           check(tokens::TokenType::STATIC);
+           check(tokens::TokenType::STATIC) ||
+           check(tokens::TokenType::ALIGNED) || // Added class modifiers
+           check(tokens::TokenType::PACKED) ||
+           check(tokens::TokenType::ABSTRACT);
   }
 
   nodes::StmtPtr parseExpressionStatement();

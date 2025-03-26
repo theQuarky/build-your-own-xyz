@@ -75,7 +75,10 @@ bool BaseParseVisitor::isDeclarationStart() const {
          tokens_.check(tokens::TokenType::CONST) ||
          tokens_.check(tokens::TokenType::FUNCTION) ||
          tokens_.check(tokens::TokenType::CLASS) ||
-         tokens::isFunctionModifier(tokens_.getCurrentToken().getType());
+         tokens_.check(tokens::TokenType::PUBLIC) ||
+         tokens_.check(tokens::TokenType::PRIVATE) ||
+         tokens_.check(tokens::TokenType::PROTECTED) ||
+         tokens::isFunctionModifier(tokens_.peek().getType());
 }
 
 void BaseParseVisitor::synchronize() {

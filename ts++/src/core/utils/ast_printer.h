@@ -626,7 +626,7 @@ private:
       withIndent([&]() { visitExpr(node->getOperand().get()); });
     });
   }
-
+  // MethodDeclNode
   void visitDeclStmt(const nodes::DeclarationStmtNode *node) {
     printLine("Declaration Statement " +
               getLocationString(node->getLocation()));
@@ -638,6 +638,10 @@ private:
                    std::dynamic_pointer_cast<nodes::FunctionDeclNode>(
                        node->getDeclaration()))
         visitFuncDecl(funcDecl.get());
+      else if (auto methodDecl =
+                   std::dynamic_pointer_cast<nodes::MethodDeclNode>(
+                       node->getDeclaration()))
+        visitMethodDecl(methodDecl.get());
       else
         printLine("Unknown declaration type", RED);
     });

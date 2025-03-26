@@ -218,18 +218,19 @@ public:
   nodes::DeclPtr parseMethod(tokens::TokenType accessModifier) {
     auto location = tokens_.peek().getLocation();
 
+    // Consume the 'function' keyword
     if (!consume(tokens::TokenType::FUNCTION, "Expected 'function' keyword")) {
       return nullptr;
     }
 
-    // method name
+    // Parse method name
     if (!match(tokens::TokenType::IDENTIFIER)) {
       error("Expected method name after 'function'");
       return nullptr;
     }
     auto methodName = tokens_.previous().getLexeme();
 
-    // parameter list
+    // Parse parameter list
     if (!consume(tokens::TokenType::LEFT_PAREN,
                  "Expected '(' after method name")) {
       return nullptr;
@@ -247,7 +248,7 @@ public:
       return nullptr;
     }
 
-    // optional return type:  : int
+    // Parse optional return type
     nodes::TypePtr returnType;
     if (match(tokens::TokenType::COLON)) {
       returnType = declVisitor_.parseType();
@@ -256,7 +257,7 @@ public:
       }
     }
 
-    // optional throws clause
+    // Parse optional throws clause
     std::vector<nodes::TypePtr> throwsTypes;
     if (match(tokens::TokenType::THROWS)) {
       do {
@@ -268,9 +269,9 @@ public:
       } while (match(tokens::TokenType::COMMA));
     }
 
-    // Parse method body block
-    if (!check(tokens::TokenType::LEFT_BRACE)) {
-      error("Expected '{' before method body");
+    // Parse the method body
+    if (!consume(tokens::TokenType::LEFT_BRACE,
+                 "Expected '{' before method body")) {
       return nullptr;
     }
 
@@ -279,7 +280,7 @@ public:
       return nullptr;
     }
 
-    // Build a MethodDeclNode
+    // Create the method node
     std::vector<tokens::TokenType> methodModifiers;
     return std::make_shared<nodes::MethodDeclNode>(
         methodName, accessModifier, std::move(parameters),

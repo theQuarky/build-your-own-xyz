@@ -41,9 +41,7 @@ nodes::DeclPtr DeclarationParseVisitor::parseDeclaration() {
       } else if (check(tokens::TokenType::LET) ||
                  check(tokens::TokenType::CONST)) {
         // Field declaration
-        bool isConst = tokens_.peek().getType() == tokens::TokenType::CONST;
-        tokens_.advance(); // Consume let/const
-        return classDeclVisitor_.parseField(accessModifier, isConst);
+        return classDeclVisitor_.parseField(accessModifier);
       } else {
         error("Expected class member declaration after access modifier");
         return nullptr;
@@ -75,6 +73,24 @@ nodes::DeclPtr DeclarationParseVisitor::parseDeclaration() {
       tokens_.advance();
     }
 
+    // Parse class modifiers
+    std::vector<tokens::TokenType> classModifiers;
+    if (check(tokens::TokenType::ALIGNED) || check(tokens::TokenType::PACKED) ||
+        check(tokens::TokenType::ABSTRACT)) {
+      tokens::TokenType modifierType = tokens_.peek().getType();
+      tokens_.advance(); // Consume the modifier
+      classModifiers.push_back(modifierType);
+
+      // Check for CLASS after modifier
+      if (check(tokens::TokenType::CLASS)) {
+        auto classDecl = classDeclVisitor_.parseClassDecl(classModifiers);
+        if (!classDecl) {
+          return nullptr;
+        }
+        return classDecl;
+      }
+    }
+
     // Parse function modifiers
     std::vector<tokens::TokenType> modifiers;
     parseFunctionModifiers(modifiers);
@@ -87,19 +103,16 @@ nodes::DeclPtr DeclarationParseVisitor::parseDeclaration() {
       return funcDecl;
     }
 
-    std::vector<tokens::TokenType> classModifiers;
-    parseClassModifiers(classModifiers);
+    // Check directly for CLASS
     if (check(tokens::TokenType::CLASS)) {
       auto classDecl = classDeclVisitor_.parseClassDecl(classModifiers);
-
       if (!classDecl) {
-        std::cout << "class declaration: " << classDecl.get() << std::endl;
         return nullptr;
       }
       return classDecl;
     }
 
-    // Parse the declaration keyword (let/const)
+    // Parse variable declarations (let/const)
     if (match(tokens::TokenType::LET) || match(tokens::TokenType::CONST)) {
       bool isConst = tokens_.previous().getType() == tokens::TokenType::CONST;
 
