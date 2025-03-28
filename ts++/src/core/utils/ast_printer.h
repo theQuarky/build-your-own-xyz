@@ -726,7 +726,25 @@ private:
     });
   }
 
-  // (Removed unused visitCase stub)
+  void visitPropertyDecl(const nodes::PropertyDeclNode *node) {
+    printLine("PropertyDecl " + getLocationString(node->getLocation()), GREEN);
+    withIndent([&]() {
+      printLine("Access: " + tokenTypeToString(node->getAccessModifier()));
+      printLine("Name: '" + node->getName() + "'");
+      printLine(std::string("Kind: ") +
+                (node->getKind() == nodes::PropertyKind::Getter ? "Getter"
+                                                                : "Setter"));
+      if (node->getPropertyType()) {
+        printLine("Property Type:");
+        withIndent([&]() { visitType(node->getPropertyType().get()); });
+      }
+
+      if (node->getBody()) {
+        printLine("Body:");
+        withIndent([&]() { visitBlock(node->getBody().get()); });
+      }
+    });
+  }
 
   void visitThrowStmt(const nodes::ThrowStmtNode *node) {
     printLine("Throw " + getLocationString(node->getLocation()));
@@ -874,9 +892,12 @@ public:
       else if (auto throwStmt =
                    std::dynamic_pointer_cast<nodes::ThrowStmtNode>(node))
         visitThrowStmt(throwStmt.get());
+      else if (auto propertyDecl =
+                   std::dynamic_pointer_cast<nodes::PropertyDeclNode>(node))
+        visitPropertyDecl(propertyDecl.get());
       else {
         indent();
-        std::cout << RED << "Unknown node type at "
+        std::cout << RED << "Unknown node type at gfgfgf"
                   << node->getLocation().getLine() << ":"
                   << node->getLocation().getColumn() << RESET << "\n";
       }
@@ -940,6 +961,9 @@ public:
       visitExpr(expr.get());
     else if (auto tryStmt = std::dynamic_pointer_cast<nodes::TryStmtNode>(node))
       visitTryStmt(tryStmt.get());
+    else if (auto propertyDecl =
+                 std::dynamic_pointer_cast<nodes::PropertyDeclNode>(node))
+      visitPropertyDecl(propertyDecl.get());
     else {
       indent();
       std::cout << RED << "Unknown node type at "

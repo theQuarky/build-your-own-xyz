@@ -10,105 +10,116 @@ class ExpressionParseVisitor;
 
 class FlowControlVisitor {
 public:
-    FlowControlVisitor(tokens::TokenStream& tokens,
-                      core::ErrorReporter& errorReporter,
-                      IExpressionVisitor& exprVisitor)
-        : tokens_(tokens)
-        , errorReporter_(errorReporter)
-        , exprVisitor_(exprVisitor)
-    {}
+  FlowControlVisitor(tokens::TokenStream &tokens,
+                     core::ErrorReporter &errorReporter,
+                     IExpressionVisitor &exprVisitor)
+      : tokens_(tokens), errorReporter_(errorReporter),
+        exprVisitor_(exprVisitor) {}
 
-    nodes::StmtPtr parseReturn() {
-        auto location = tokens_.previous().getLocation();
-        nodes::ExpressionPtr value;
+  nodes::StmtPtr parseReturn() {
+    auto location = tokens_.previous().getLocation();
+    nodes::ExpressionPtr value;
 
-        // Check for value after return
-        if (!check(tokens::TokenType::SEMICOLON)) {
-            value = exprVisitor_.parseExpression();
-            if (!value) return nullptr;
-        }
-
-        if (!consume(tokens::TokenType::SEMICOLON, "Expected ';' after return statement")) {
-            return nullptr;
-        }
-
-        return std::make_shared<nodes::ReturnStmtNode>(value, location);
+    // Check for value after return
+    if (tokens_.peek().getLexeme() != ";") {
+      value = exprVisitor_.parseExpression();
+      if (!value)
+        return nullptr;
     }
 
-    nodes::StmtPtr parseBreak() {
-        auto location = tokens_.previous().getLocation();
-        std::string label;
+    if (tokens_.peek().getLexeme() != ";") {
+      error("Expected ';' after return statement");
+      return nullptr;
+    }
+    tokens_.advance(); // Consume semicolon
 
-        // Optional label
-        if (match(tokens::TokenType::IDENTIFIER)) {
-            label = tokens_.previous().getLexeme();
-        }
+    return std::make_shared<nodes::ReturnStmtNode>(value, location);
+  }
 
-        if (!consume(tokens::TokenType::SEMICOLON, "Expected ';' after break statement")) {
-            return nullptr;
-        }
+  nodes::StmtPtr parseBreak() {
+    auto location = tokens_.previous().getLocation();
+    std::string label;
 
-        return std::make_shared<nodes::BreakStmtNode>(std::move(label), location);
+    // Optional label
+    if (tokens_.peek().getType() == tokens::TokenType::IDENTIFIER) {
+      label = tokens_.peek().getLexeme();
+      tokens_.advance();
     }
 
-    nodes::StmtPtr parseContinue() {
-        auto location = tokens_.previous().getLocation();
-        std::string label;
+    if (tokens_.peek().getLexeme() != ";") {
+      error("Expected ';' after break statement");
+      return nullptr;
+    }
+    tokens_.advance();
 
-        // Optional label
-        if (match(tokens::TokenType::IDENTIFIER)) {
-            label = tokens_.previous().getLexeme();
-        }
+    return std::make_shared<nodes::BreakStmtNode>(std::move(label), location);
+  }
 
-        if (!consume(tokens::TokenType::SEMICOLON, "Expected ';' after continue statement")) {
-            return nullptr;
-        }
+  nodes::StmtPtr parseContinue() {
+    auto location = tokens_.previous().getLocation();
+    std::string label;
 
-        return std::make_shared<nodes::ContinueStmtNode>(std::move(label), location);
+    // Optional label
+    if (tokens_.peek().getType() == tokens::TokenType::IDENTIFIER) {
+      label = tokens_.peek().getLexeme();
+      tokens_.advance();
     }
 
-    nodes::StmtPtr parseThrow() {
-        auto location = tokens_.previous().getLocation();
-
-        auto value = exprVisitor_.parseExpression();
-        if (!value) return nullptr;
-
-        if (!consume(tokens::TokenType::SEMICOLON, "Expected ';' after throw statement")) {
-            return nullptr;
-        }
-
-        return std::make_shared<nodes::ThrowStmtNode>(value, location);
+    if (tokens_.peek().getLexeme() != ";") {
+      error("Expected ';' after continue statement");
+      return nullptr;
     }
+    tokens_.advance();
+
+    return std::make_shared<nodes::ContinueStmtNode>(std::move(label),
+                                                     location);
+  }
+
+  nodes::StmtPtr parseThrow() {
+    auto location = tokens_.previous().getLocation();
+
+    auto value = exprVisitor_.parseExpression();
+    if (!value)
+      return nullptr;
+
+    if (tokens_.peek().getLexeme() != ";") {
+      error("Expected ';' after throw statement");
+      return nullptr;
+    }
+    tokens_.advance();
+
+    return std::make_shared<nodes::ThrowStmtNode>(value, location);
+  }
 
 private:
-    inline bool match(tokens::TokenType type) {
-        if (check(type)) {
-            tokens_.advance();
-            return true;
-        }
-        return false;
+  inline bool match(tokens::TokenType type) {
+    if (check(type)) {
+      tokens_.advance();
+      return true;
     }
+    return false;
+  }
 
-    inline bool check(tokens::TokenType type) const {
-        return !tokens_.isAtEnd() && tokens_.peek().getType() == type;
+  inline bool check(tokens::TokenType type) const {
+    return !tokens_.isAtEnd() && tokens_.peek().getType() == type;
+  }
+
+  inline bool consume(tokens::TokenType type, const std::string &message) {
+    if (check(type)) {
+      tokens_.advance();
+      return true;
     }
+    error(message);
+    return false;
+  }
 
-    inline bool consume(tokens::TokenType type, const std::string& message) {
-        if (check(type)) {
-            tokens_.advance();
-            return true;
-        }
-        error(message);
-        return false;
-    }
+  inline void error(const std::string &message) {
+    errorReporter_.error(tokens_.peek().getLocation(), message);
+  }
 
-    inline void error(const std::string& message) {
-        errorReporter_.error(tokens_.peek().getLocation(), message);
-    }
-
-    tokens::TokenStream& tokens_;
-    core::ErrorReporter& errorReporter_;
-    IExpressionVisitor& exprVisitor_;
+  tokens::TokenStream &tokens_;
+  core::ErrorReporter &errorReporter_;
+  IExpressionVisitor &exprVisitor_;
 };
 
 } // namespace visitors

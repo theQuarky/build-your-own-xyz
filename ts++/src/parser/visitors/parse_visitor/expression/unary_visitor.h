@@ -3,6 +3,7 @@
 #include "parser/nodes/expression_nodes.h"
 #include "parser/visitors/parse_visitor/expression/iexpression_visitor.h"
 #include "tokens/stream/token_stream.h"
+#include "tokens/token_type.h"
 
 namespace visitors {
 
@@ -63,6 +64,7 @@ private:
     case tokens::TokenType::TILDE:       // ~
     case tokens::TokenType::PLUS_PLUS:   // ++
     case tokens::TokenType::MINUS_MINUS: // --
+    case tokens::TokenType::STAR:        // *
       return true;
     default:
       return false;
@@ -86,6 +88,7 @@ private:
     case tokens::TokenType::TILDE:       // ~
     case tokens::TokenType::PLUS_PLUS:   // ++
     case tokens::TokenType::MINUS_MINUS: // --
+    case tokens::TokenType::STAR:        // *
       return true;
     default:
       return false;

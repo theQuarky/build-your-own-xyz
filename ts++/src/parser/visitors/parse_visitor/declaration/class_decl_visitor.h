@@ -5,6 +5,7 @@
 #include "parser/visitors/parse_visitor/expression/iexpression_visitor.h"
 #include "parser/visitors/parse_visitor/statement/istatement_visitor.h"
 #include "tokens/stream/token_stream.h"
+#include "tokens/token_type.h"
 #include <iostream>
 #include <ostream>
 
@@ -21,42 +22,39 @@ public:
         declVisitor_(declVisitor), exprVisitor_(exprVisitor),
         stmtVisitor_(stmtVisitor) {}
 
-  /// Main entry: Parse a class declaration (with optional initial modifiers).
-  // Update the parseClassDecl method in your class_decl_visitor.h file with
-  // these debugging statements
-
   nodes::DeclPtr
   parseClassDecl(const std::vector<tokens::TokenType> &initialModifiers = {}) {
     auto location = tokens_.peek().getLocation();
     std::vector<tokens::TokenType> modifiers = initialModifiers;
 
-    std::cout << "Starting class declaration parsing" << std::endl;
-
-    // Expect 'class' keyword
-    if (!match(tokens::TokenType::CLASS)) {
+    // Expect 'class' keyword - using lexeme check
+    if (tokens_.peek().getLexeme() != "class") {
       error("Expected 'class' keyword");
       return nullptr;
     }
+    tokens_.advance();
 
     // Parse class name
-    if (!match(tokens::TokenType::IDENTIFIER)) {
+    if (tokens_.peek().getType() != tokens::TokenType::IDENTIFIER) {
       error("Expected class name after 'class'");
       return nullptr;
     }
-    auto className = tokens_.previous().getLexeme();
-    std::cout << "Parsing class: " << className << std::endl;
+    auto className = tokens_.peek().getLexeme();
+    tokens_.advance();
 
     // Parse optional generic parameters
     std::vector<nodes::TypePtr> genericParams;
-    if (match(tokens::TokenType::LESS)) {
+    if (tokens_.peek().getLexeme() == "<") {
+      tokens_.advance();
       if (!parseGenericParams(genericParams)) {
-        return nullptr; // parseGenericParams() calls error() on its own
+        return nullptr;
       }
     }
 
     // Parse optional "extends" (base class)
     nodes::TypePtr baseClass;
-    if (match(tokens::TokenType::EXTENDS)) {
+    if (tokens_.peek().getLexeme() == "extends") {
+      tokens_.advance();
       baseClass = declVisitor_.parseType();
       if (!baseClass) {
         error("Expected base class type after 'extends'");
@@ -66,7 +64,8 @@ public:
 
     // Parse optional "implements" list
     std::vector<nodes::TypePtr> interfaces;
-    if (match(tokens::TokenType::IMPLEMENTS)) {
+    if (tokens_.peek().getLexeme() == "implements") {
+      tokens_.advance();
       do {
         auto ifaceType = declVisitor_.parseType();
         if (!ifaceType) {
@@ -78,93 +77,91 @@ public:
     }
 
     // Expect '{' to start class body
-    if (!consume(tokens::TokenType::LEFT_BRACE,
-                 "Expected '{' before class body")) {
+    if (tokens_.peek().getLexeme() != "{") {
+      error("Expected '{' before class body");
       return nullptr;
     }
-    std::cout << "Starting class body for " << className << std::endl;
-
-    // Parse class members until '}' or end-of-file
-    // Update the end of class body parsing in the parseClassDecl method
-    // Replace the while loop and the code that follows it with this more robust
-    // approach:
-
-    // Parse class members until '}' or end-of-file
-    // Replace just the class body parsing loop in parseClassDecl with this
-    // simplest version:
+    tokens_.advance();
 
     // Parse class members
     std::vector<nodes::DeclPtr> members;
     int memberCount = 0;
 
-    // Simple loop - parse until right brace or EOF
-    while (!check(tokens::TokenType::RIGHT_BRACE) && !tokens_.isAtEnd()) {
-      std::cout << "Parsing class member #" << memberCount
-                << ", token: " << tokens_.peek().getLexeme() << " at line "
-                << tokens_.peek().getLocation().getLine() << std::endl;
+    // Improved class body parsing loop
+    while (!tokens_.isAtEnd()) {
+      // Check for end of class
+      if (tokens_.peek().getLexeme() == "}") {
+        break;
+      }
 
       // Try to parse a member
       auto member = parseMemberDecl();
       if (member) {
         members.push_back(std::move(member));
         memberCount++;
-        std::cout << "Successfully parsed member #" << memberCount << std::endl;
       } else {
-        std::cout << "Error parsing member, trying to recover..." << std::endl;
         // Skip tokens until we find something that looks like a member start
         synchronize();
 
         // If we're now at the end of the class, break out
-        if (check(tokens::TokenType::RIGHT_BRACE) || tokens_.isAtEnd()) {
+        if (tokens_.peek().getLexeme() == "}" || tokens_.isAtEnd()) {
           break;
         }
       }
     }
 
-    std::cout << "End of class body, found " << memberCount << " members"
-              << std::endl;
-
     // Consume the closing brace if present
-    if (check(tokens::TokenType::RIGHT_BRACE)) {
+    if (tokens_.peek().getLexeme() == "}") {
       tokens_.advance(); // Advance without error reporting
-      std::cout << "Successfully closed class " << className << std::endl;
     } else {
-      std::cout << "Warning: Class body ended without closing brace"
-                << std::endl;
+      error("Expected '}' at end of class declaration");
     }
 
-    // Create and return the class node regardless
-    return std::make_shared<nodes::ClassDeclNode>(
-        className, std::move(modifiers), std::move(baseClass),
-        std::move(interfaces), std::move(members), location);
+    // Create appropriate class node based on whether it has generic parameters
+    if (!genericParams.empty()) {
+      return std::make_shared<nodes::GenericClassDeclNode>(
+          className, modifiers, std::move(baseClass), std::move(interfaces),
+          std::move(members), std::move(genericParams), location);
+    } else {
+      return std::make_shared<nodes::ClassDeclNode>(
+          className, modifiers, std::move(baseClass), std::move(interfaces),
+          std::move(members), location);
+    }
   }
+
   nodes::DeclPtr parseMemberDecl() {
     try {
       auto location = tokens_.peek().getLocation();
 
-      // Check for an access modifier
+      // Check for an access modifier using lexeme
+      std::vector<tokens::TokenType> modifiers;
+      parseMethodModifiers(modifiers);
+
       tokens::TokenType accessModifier = tokens::TokenType::ERROR_TOKEN;
-      if (check(tokens::TokenType::PUBLIC) ||
-          check(tokens::TokenType::PRIVATE) ||
-          check(tokens::TokenType::PROTECTED)) {
+      std::string accessLexeme = tokens_.peek().getLexeme();
+      if (accessLexeme == "public" || accessLexeme == "private" ||
+          accessLexeme == "protected") {
         accessModifier = tokens_.peek().getType();
         tokens_.advance(); // consume it
       }
 
-      // Handle different member types
-      if (check(tokens::TokenType::CONSTRUCTOR)) {
+      // Handle different member types USING LEXEMES
+      std::string tokenLexeme = tokens_.peek().getLexeme();
+      if (tokenLexeme == "constructor") {
         return parseConstructor(accessModifier);
-      } else if (check(tokens::TokenType::FUNCTION)) {
-        return parseMethod(accessModifier);
-      } else if (check(tokens::TokenType::LET) ||
-                 check(tokens::TokenType::CONST)) {
+      } else if (tokenLexeme == "function") {
+        return parseMethod(accessModifier, modifiers);
+      } else if (tokenLexeme == "let" || tokenLexeme == "const") {
         return parseField(accessModifier);
-      } else if (check(tokens::TokenType::GET)) {
+      } else if (tokenLexeme == "get") {
         return parsePropertyGetter(accessModifier);
-      } else if (check(tokens::TokenType::SET)) {
+      } else if (tokenLexeme == "set") {
         return parsePropertySetter(accessModifier);
+      } else if (tokenLexeme == "class") {
+        // Handle nested class declarations
+        return parseNestedClass(accessModifier);
       } else {
-        error("Expected class member declaration");
+        error("Expected class member declaration, found: " + tokenLexeme);
         return nullptr;
       }
     } catch (const std::exception &e) {
@@ -173,38 +170,163 @@ public:
     }
   }
 
+  // Add support for nested classes
+  nodes::DeclPtr parseNestedClass(tokens::TokenType accessModifier) {
+    // We've already verified this is a "class" token
+    tokens_.advance(); // Consume "class"
+    
+    // Use the same class parsing logic, but track that it's a nested class
+    auto location = tokens_.previous().getLocation();
+    
+    if (tokens_.peek().getType() != tokens::TokenType::IDENTIFIER) {
+      error("Expected class name after 'class'");
+      return nullptr;
+    }
+    auto className = tokens_.peek().getLexeme();
+    tokens_.advance();
+    
+    // Parse optional generic parameters
+    std::vector<nodes::TypePtr> genericParams;
+    if (tokens_.peek().getLexeme() == "<") {
+      tokens_.advance();
+      if (!parseGenericParams(genericParams)) {
+        return nullptr;
+      }
+    }
+    
+    // Parse optional "extends" (base class)
+    nodes::TypePtr baseClass;
+    if (tokens_.peek().getLexeme() == "extends") {
+      tokens_.advance();
+      baseClass = declVisitor_.parseType();
+      if (!baseClass) {
+        error("Expected base class type after 'extends'");
+        return nullptr;
+      }
+    }
+    
+    // Parse optional "implements" list
+    std::vector<nodes::TypePtr> interfaces;
+    if (tokens_.peek().getLexeme() == "implements") {
+      tokens_.advance();
+      do {
+        auto ifaceType = declVisitor_.parseType();
+        if (!ifaceType) {
+          error("Expected interface name after 'implements'");
+          return nullptr;
+        }
+        interfaces.push_back(ifaceType);
+      } while (match(tokens::TokenType::COMMA));
+    }
+    
+    // Expect '{' to start class body
+    if (tokens_.peek().getLexeme() != "{") {
+      error("Expected '{' before nested class body");
+      return nullptr;
+    }
+    tokens_.advance();
+    
+    // Parse nested class members
+    std::vector<nodes::DeclPtr> members;
+    
+    while (!tokens_.isAtEnd()) {
+      // Check for end of class
+      if (tokens_.peek().getLexeme() == "}") {
+        break;
+      }
+      
+      // Try to parse a member
+      auto member = parseMemberDecl();
+      if (member) {
+        members.push_back(std::move(member));
+      } else {
+        // Skip tokens until we find something that looks like a member start
+        synchronize();
+        
+        // If we're now at the end of the class, break out
+        if (tokens_.peek().getLexeme() == "}" || tokens_.isAtEnd()) {
+          break;
+        }
+      }
+    }
+    
+    // Consume the closing brace
+    if (tokens_.peek().getLexeme() == "}") {
+      tokens_.advance();
+    } else {
+      error("Expected '}' after nested class body");
+    }
+    
+    // Create the appropriate class node
+    std::vector<tokens::TokenType> classModifiers;
+    
+    if (!genericParams.empty()) {
+      return std::make_shared<nodes::GenericClassDeclNode>(
+          className, classModifiers, std::move(baseClass),
+          std::move(interfaces), std::move(members),
+          std::move(genericParams), location);
+    } else {
+      return std::make_shared<nodes::ClassDeclNode>(
+          className, classModifiers, std::move(baseClass),
+          std::move(interfaces), std::move(members), location);
+    }
+  }
+
+  bool parseMethodModifiers(std::vector<tokens::TokenType> &modifiers) {
+    while (true) {
+      auto token = tokens_.peek();
+      tokens::TokenType type = token.getType();
+      std::string lexeme = token.getLexeme();
+
+      // Check for function modifiers by lexeme
+      if (lexeme == "#inline" || lexeme == "#virtual" || lexeme == "#unsafe" ||
+          lexeme == "#simd" || lexeme.substr(0, 1) == "#") {
+        modifiers.push_back(type);
+        tokens_.advance();
+      } else {
+        break;
+      }
+    }
+    return true;
+  }
+
   nodes::DeclPtr parseConstructor(tokens::TokenType accessModifier) {
     auto location = tokens_.peek().getLocation();
 
-    if (!consume(tokens::TokenType::CONSTRUCTOR,
-                 "Expected 'constructor' keyword")) {
+    // Check lexeme instead of token type
+    if (tokens_.peek().getLexeme() != "constructor") {
+      error("Expected 'constructor' keyword");
       return nullptr;
     }
+    tokens_.advance();
 
     // Parameter list: constructor()
-    if (!consume(tokens::TokenType::LEFT_PAREN,
-                 "Expected '(' after 'constructor'")) {
+    if (tokens_.peek().getLexeme() != "(") {
+      error("Expected '(' after 'constructor'");
       return nullptr;
     }
+    tokens_.advance();
 
     std::vector<nodes::ParamPtr> parameters;
-    if (!check(tokens::TokenType::RIGHT_PAREN)) {
+    if (tokens_.peek().getLexeme() != ")") {
       if (!parseParameterList(parameters)) {
         return nullptr;
       }
     }
 
-    if (!consume(tokens::TokenType::RIGHT_PAREN,
-                 "Expected ')' after constructor parameters")) {
+    if (tokens_.peek().getLexeme() != ")") {
+      error("Expected ')' after constructor parameters");
       return nullptr;
     }
+    tokens_.advance();
 
     // Parse constructor body block
-    if (!check(tokens::TokenType::LEFT_BRACE)) {
+    if (tokens_.peek().getLexeme() != "{") {
       error("Expected '{' before constructor body");
       return nullptr;
     }
 
+    tokens_.advance(); // Consume the opening brace
     auto body = stmtVisitor_.parseBlock();
     if (!body) {
       return nullptr;
@@ -215,42 +337,51 @@ public:
         accessModifier, std::move(parameters), std::move(body), location);
   }
 
-  nodes::DeclPtr parseMethod(tokens::TokenType accessModifier) {
+  // Update the function declaration to accept modifiers
+  nodes::DeclPtr
+  parseMethod(tokens::TokenType accessModifier,
+              const std::vector<tokens::TokenType> &methodModifiers = {}) {
     auto location = tokens_.peek().getLocation();
 
-    // Consume the 'function' keyword
-    if (!consume(tokens::TokenType::FUNCTION, "Expected 'function' keyword")) {
+    // Consume the 'function' keyword - using lexeme check
+    if (tokens_.peek().getLexeme() != "function") {
+      error("Expected 'function' keyword");
       return nullptr;
     }
+    tokens_.advance();
 
     // Parse method name
-    if (!match(tokens::TokenType::IDENTIFIER)) {
+    if (tokens_.peek().getType() != tokens::TokenType::IDENTIFIER) {
       error("Expected method name after 'function'");
       return nullptr;
     }
-    auto methodName = tokens_.previous().getLexeme();
+    auto methodName = tokens_.peek().getLexeme();
+    tokens_.advance();
 
     // Parse parameter list
-    if (!consume(tokens::TokenType::LEFT_PAREN,
-                 "Expected '(' after method name")) {
+    if (tokens_.peek().getLexeme() != "(") {
+      error("Expected '(' after method name");
       return nullptr;
     }
+    tokens_.advance();
 
     std::vector<nodes::ParamPtr> parameters;
-    if (!check(tokens::TokenType::RIGHT_PAREN)) {
+    if (tokens_.peek().getLexeme() != ")") {
       if (!parseParameterList(parameters)) {
         return nullptr;
       }
     }
 
-    if (!consume(tokens::TokenType::RIGHT_PAREN,
-                 "Expected ')' after parameters")) {
+    if (tokens_.peek().getLexeme() != ")") {
+      error("Expected ')' after parameters");
       return nullptr;
     }
+    tokens_.advance();
 
     // Parse optional return type
     nodes::TypePtr returnType;
-    if (match(tokens::TokenType::COLON)) {
+    if (tokens_.peek().getLexeme() == ":") {
+      tokens_.advance();
       returnType = declVisitor_.parseType();
       if (!returnType) {
         return nullptr;
@@ -259,7 +390,8 @@ public:
 
     // Parse optional throws clause
     std::vector<nodes::TypePtr> throwsTypes;
-    if (match(tokens::TokenType::THROWS)) {
+    if (tokens_.peek().getLexeme() == "throws") {
+      tokens_.advance();
       do {
         auto thrownType = declVisitor_.parseType();
         if (!thrownType) {
@@ -270,47 +402,52 @@ public:
     }
 
     // Parse the method body
-    if (!consume(tokens::TokenType::LEFT_BRACE,
-                 "Expected '{' before method body")) {
+    if (tokens_.peek().getLexeme() != "{") {
+      error("Expected '{' before method body");
       return nullptr;
     }
 
+    tokens_.advance(); // Consume the opening brace
     auto body = stmtVisitor_.parseBlock();
     if (!body) {
       return nullptr;
     }
 
-    // Create the method node
-    std::vector<tokens::TokenType> methodModifiers;
+    // Create the method node - now passing methodModifiers
     return std::make_shared<nodes::MethodDeclNode>(
         methodName, accessModifier, std::move(parameters),
-        std::move(returnType), std::move(throwsTypes),
-        std::move(methodModifiers), std::move(body), location);
+        std::move(returnType), std::move(throwsTypes), methodModifiers,
+        std::move(body), location);
   }
 
   nodes::DeclPtr parseField(tokens::TokenType accessModifier,
                             bool isConst = false) {
     auto location = tokens_.peek().getLocation();
 
-    if (match(tokens::TokenType::LET)) {
+    std::string tokenLexeme = tokens_.peek().getLexeme();
+    if (tokenLexeme == "let") {
       isConst = false;
-    } else if (match(tokens::TokenType::CONST)) {
+      tokens_.advance();
+    } else if (tokenLexeme == "const") {
       isConst = true;
+      tokens_.advance();
     } else {
       error("Expected 'let' or 'const' in field declaration");
       return nullptr;
     }
 
     // field name
-    if (!match(tokens::TokenType::IDENTIFIER)) {
+    if (tokens_.peek().getType() != tokens::TokenType::IDENTIFIER) {
       error("Expected field name");
       return nullptr;
     }
-    auto fieldName = tokens_.previous().getLexeme();
+    auto fieldName = tokens_.peek().getLexeme();
+    tokens_.advance();
 
     // optional type annotation: ": Type"
     nodes::TypePtr fieldType;
-    if (match(tokens::TokenType::COLON)) {
+    if (tokens_.peek().getLexeme() == ":") {
+      tokens_.advance();
       fieldType = declVisitor_.parseType();
       if (!fieldType) {
         return nullptr;
@@ -319,7 +456,8 @@ public:
 
     // optional initializer: "= expression"
     nodes::ExpressionPtr initializer;
-    if (match(tokens::TokenType::EQUALS)) {
+    if (tokens_.peek().getLexeme() == "=") {
+      tokens_.advance();
       initializer = exprVisitor_.parseExpression();
       if (!initializer) {
         return nullptr;
@@ -327,10 +465,11 @@ public:
     }
 
     // Expect semicolon at the end
-    if (!consume(tokens::TokenType::SEMICOLON,
-                 "Expected ';' after field declaration")) {
+    if (tokens_.peek().getLexeme() != ";") {
+      error("Expected ';' after field declaration");
       return nullptr;
     }
+    tokens_.advance();
 
     // Build FieldDeclNode
     return std::make_shared<nodes::FieldDeclNode>(
@@ -341,28 +480,35 @@ public:
   nodes::DeclPtr parsePropertyGetter(tokens::TokenType accessModifier) {
     auto location = tokens_.peek().getLocation();
 
-    if (!consume(tokens::TokenType::GET, "Expected 'get' keyword")) {
+    // Check lexeme for "get"
+    if (tokens_.peek().getLexeme() != "get") {
+      error("Expected 'get' keyword");
       return nullptr;
     }
+    tokens_.advance();
 
     // property name
-    if (!match(tokens::TokenType::IDENTIFIER)) {
+    if (tokens_.peek().getType() != tokens::TokenType::IDENTIFIER) {
       error("Expected property name after 'get'");
       return nullptr;
     }
-    auto propName = tokens_.previous().getLexeme();
+    auto propName = tokens_.peek().getLexeme();
+    tokens_.advance();
 
     // Optional parameter list (may not be present)
-    if (match(tokens::TokenType::LEFT_PAREN)) {
-      if (!consume(tokens::TokenType::RIGHT_PAREN,
-                   "Expected empty parameter list for getter")) {
+    if (tokens_.peek().getLexeme() == "(") {
+      tokens_.advance();
+      if (tokens_.peek().getLexeme() != ")") {
+        error("Expected empty parameter list for getter");
         return nullptr;
       }
+      tokens_.advance();
     }
 
     // optional return type: e.g.  : int
     nodes::TypePtr returnType;
-    if (match(tokens::TokenType::COLON)) {
+    if (tokens_.peek().getLexeme() == ":") {
+      tokens_.advance();
       returnType = declVisitor_.parseType();
       if (!returnType) {
         return nullptr;
@@ -370,11 +516,12 @@ public:
     }
 
     // Parse property body
-    if (!check(tokens::TokenType::LEFT_BRACE)) {
+    if (tokens_.peek().getLexeme() != "{") {
       error("Expected '{' after property getter declaration");
       return nullptr;
     }
 
+    tokens_.advance(); // Consume the opening brace
     auto body = stmtVisitor_.parseBlock();
     if (!body) {
       return nullptr;
@@ -386,67 +533,66 @@ public:
         location);
   }
 
-  // Update this method in your class_decl_visitor.h
   nodes::DeclPtr parsePropertySetter(tokens::TokenType accessModifier) {
     auto location = tokens_.peek().getLocation();
 
-    std::cout << "Starting property setter parsing at line "
-              << location.getLine() << std::endl;
-
-    if (!consume(tokens::TokenType::SET, "Expected 'set' keyword")) {
+    // Check lexeme for "set"
+    if (tokens_.peek().getLexeme() != "set") {
+      error("Expected 'set' keyword");
       return nullptr;
     }
+    tokens_.advance();
 
     // property name
-    if (!match(tokens::TokenType::IDENTIFIER)) {
+    if (tokens_.peek().getType() != tokens::TokenType::IDENTIFIER) {
       error("Expected property name after 'set'");
       return nullptr;
     }
-    auto propName = tokens_.previous().getLexeme();
-    std::cout << "Parsing setter for property: " << propName << std::endl;
+    auto propName = tokens_.peek().getLexeme();
+    tokens_.advance();
 
     // Parse parameter for setter (value: Type)
-    if (!match(tokens::TokenType::LEFT_PAREN)) {
+    if (tokens_.peek().getLexeme() != "(") {
       error("Expected '(' after property setter name");
       return nullptr;
     }
+    tokens_.advance();
 
     // Standard parameter with parentheses
-    if (!match(tokens::TokenType::IDENTIFIER)) {
+    if (tokens_.peek().getType() != tokens::TokenType::IDENTIFIER) {
       error("Expected parameter name in setter");
       return nullptr;
     }
 
-    auto paramName = tokens_.previous().getLexeme();
-    std::cout << "Parsing setter parameter: " << paramName << std::endl;
+    auto paramName = tokens_.peek().getLexeme();
+    tokens_.advance();
 
     nodes::TypePtr paramType;
-    if (match(tokens::TokenType::COLON)) {
+    if (tokens_.peek().getLexeme() == ":") {
+      tokens_.advance();
       paramType = declVisitor_.parseType();
       if (!paramType) {
         return nullptr;
       }
     }
 
-    if (!consume(tokens::TokenType::RIGHT_PAREN,
-                 "Expected ')' after setter parameter")) {
+    if (tokens_.peek().getLexeme() != ")") {
+      error("Expected ')' after setter parameter");
       return nullptr;
     }
+    tokens_.advance();
 
     // Parse setter body block
-    if (!check(tokens::TokenType::LEFT_BRACE)) {
+    if (tokens_.peek().getLexeme() != "{") {
       error("Expected '{' after setter parameter list");
       return nullptr;
     }
 
-    std::cout << "Parsing setter body" << std::endl;
+    tokens_.advance(); // Consume the opening brace
     auto body = stmtVisitor_.parseBlock();
     if (!body) {
-      std::cout << "Failed to parse setter body" << std::endl;
       return nullptr;
     }
-
-    std::cout << "Successfully parsed property setter" << std::endl;
 
     // Build a property-decl node in "setter" mode
     return std::make_shared<nodes::PropertyDeclNode>(
@@ -455,51 +601,81 @@ public:
   }
 
   bool parseGenericParams(std::vector<nodes::TypePtr> &outParams) {
-    // e.g. < T extends SomeType, U & AnotherType >
     do {
-      if (!match(tokens::TokenType::IDENTIFIER)) {
+      if (tokens_.peek().getType() != tokens::TokenType::IDENTIFIER) {
         error("Expected generic parameter name");
         return false;
       }
-      auto paramName = tokens_.previous().getLexeme();
-      auto paramLoc = tokens_.previous().getLocation();
+      
+      // Get parameter name
+      auto paramName = tokens_.peek().getLexeme();
+      auto paramLoc = tokens_.peek().getLocation();
+      tokens_.advance();
 
-      // optional "extends" Type
+      // Parse constraint if present
       std::vector<nodes::TypePtr> constraints;
-      if (match(tokens::TokenType::EXTENDS)) {
-        auto baseConstraint = declVisitor_.parseType();
-        if (!baseConstraint) {
+      if (tokens_.peek().getLexeme() == "extends") {
+        tokens_.advance();
+
+        // Handle constraint type
+        if (tokens_.peek().getType() != tokens::TokenType::IDENTIFIER) {
+          error("Expected constraint type after 'extends'");
           return false;
         }
-        constraints.push_back(baseConstraint);
+        
+        auto constraintName = tokens_.peek().getLexeme();
+        auto constraintLoc = tokens_.peek().getLocation();
+        tokens_.advance();
+        
+        // Create a constraint node - either built-in or named type
+        auto constraintNode = std::make_shared<nodes::NamedTypeNode>(
+            constraintName, constraintLoc);
+        constraints.push_back(constraintNode);
 
-        while (match(tokens::TokenType::AMPERSAND)) {
-          // intersection type constraints
-          auto extraCon = declVisitor_.parseType();
-          if (!extraCon) {
+        // Parse any intersection types with &
+        while (tokens_.peek().getLexeme() == "&") {
+          tokens_.advance();
+          
+          if (tokens_.peek().getType() != tokens::TokenType::IDENTIFIER) {
+            error("Expected constraint type after '&'");
             return false;
           }
-          constraints.push_back(extraCon);
+          
+          auto secondConstraintName = tokens_.peek().getLexeme();
+          auto secondConstraintLoc = tokens_.peek().getLocation();
+          tokens_.advance();
+          
+          auto additionalConstraint = std::make_shared<nodes::NamedTypeNode>(
+              secondConstraintName, secondConstraintLoc);
+          constraints.push_back(additionalConstraint);
         }
       }
 
-      // Build the node (in your code, you might have GenericParamNode)
+      // Build the generic parameter node
       auto gpNode = std::make_shared<nodes::GenericParamNode>(
           paramName, std::move(constraints), paramLoc);
       outParams.push_back(gpNode);
 
-    } while (match(tokens::TokenType::COMMA));
+      // Check for comma for additional parameters
+      if (tokens_.peek().getLexeme() != ",") {
+        break;
+      }
+      tokens_.advance(); // Consume comma
+      
+    } while (true);
 
-    if (!consume(tokens::TokenType::GREATER,
-                 "Expected '>' after generic parameters")) {
+    // Expect closing angle bracket
+    if (tokens_.peek().getLexeme() != ">") {
+      error("Expected '>' after generic parameters");
       return false;
     }
+    tokens_.advance(); // Consume '>'
     return true;
   }
 
   bool parseParameterList(std::vector<nodes::ParamPtr> &paramsOut) {
     // loop until we see ')'
-    while (!check(tokens::TokenType::RIGHT_PAREN) && !tokens_.isAtEnd()) {
+    while (tokens_.peek().getLexeme() != ")" && !tokens_.isAtEnd()) {
       auto param = parseSingleParameter();
       if (!param) {
         synchronize();
@@ -507,9 +683,10 @@ public:
       }
       paramsOut.push_back(std::move(param));
 
-      if (!match(tokens::TokenType::COMMA)) {
+      if (tokens_.peek().getLexeme() != ",") {
         break;
       }
+      tokens_.advance(); // Consume comma
     }
     return true;
   }
@@ -521,23 +698,27 @@ public:
     bool isConst = false;
 
     // optional 'ref' or 'const'
-    if (match(tokens::TokenType::REF)) {
+    if (tokens_.peek().getLexeme() == "ref") {
       isRef = true;
+      tokens_.advance();
     }
-    if (match(tokens::TokenType::CONST)) {
+    if (tokens_.peek().getLexeme() == "const") {
       isConst = true;
+      tokens_.advance();
     }
 
     // parameter name
-    if (!match(tokens::TokenType::IDENTIFIER)) {
+    if (tokens_.peek().getType() != tokens::TokenType::IDENTIFIER) {
       error("Expected parameter name");
       return nullptr;
     }
-    auto paramName = tokens_.previous().getLexeme();
+    auto paramName = tokens_.peek().getLexeme();
+    tokens_.advance();
 
     // optional type: ": Type"
     nodes::TypePtr paramType;
-    if (match(tokens::TokenType::COLON)) {
+    if (tokens_.peek().getLexeme() == ":") {
+      tokens_.advance();
       paramType = declVisitor_.parseType();
       if (!paramType) {
         return nullptr;
@@ -546,7 +727,8 @@ public:
 
     // optional default value: "= expression"
     nodes::ExpressionPtr defaultValue;
-    if (match(tokens::TokenType::EQUALS)) {
+    if (tokens_.peek().getLexeme() == "=") {
+      tokens_.advance();
       defaultValue = exprVisitor_.parseExpression();
       if (!defaultValue) {
         return nullptr;
@@ -583,25 +765,18 @@ private:
   void synchronize() {
     tokens_.advance();
     while (!tokens_.isAtEnd()) {
-      if (tokens_.previous().getType() == tokens::TokenType::SEMICOLON)
+      if (tokens_.previous().getLexeme() == ";")
         return;
 
-      switch (tokens_.peek().getType()) {
-      case tokens::TokenType::CLASS:
-      case tokens::TokenType::FUNCTION:
-      case tokens::TokenType::CONSTRUCTOR:
-      case tokens::TokenType::LET:
-      case tokens::TokenType::CONST:
-      case tokens::TokenType::PUBLIC:
-      case tokens::TokenType::PRIVATE:
-      case tokens::TokenType::PROTECTED:
-      case tokens::TokenType::GET:
-      case tokens::TokenType::SET:
-      case tokens::TokenType::RIGHT_BRACE:
+      // Use lexeme checks for keywords
+      std::string lexeme = tokens_.peek().getLexeme();
+      if (lexeme == "class" || lexeme == "function" ||
+          lexeme == "constructor" || lexeme == "let" || lexeme == "const" ||
+          lexeme == "public" || lexeme == "private" || lexeme == "protected" ||
+          lexeme == "get" || lexeme == "set" || lexeme == "}") {
         return;
-      default:
-        tokens_.advance();
       }
+      tokens_.advance();
     }
   }
 

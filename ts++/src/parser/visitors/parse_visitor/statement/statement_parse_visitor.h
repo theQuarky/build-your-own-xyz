@@ -9,6 +9,8 @@
 #include "trycatch_stmt.visitor.h"
 #include <cassert>
 #include <iostream>
+#include <iterator>
+#include <ostream>
 
 namespace visitors {
 
@@ -30,8 +32,9 @@ public:
 
   nodes::StmtPtr parseStatement() override {
     try {
-      if (check(tokens::TokenType::IDENTIFIER) &&
-          tokens_.peekNext().getType() == tokens::TokenType::COLON) {
+      // Check for labeled statements
+      if (tokens_.peek().getType() == tokens::TokenType::IDENTIFIER &&
+          tokens_.peekNext().getLexeme() == ":") {
         // This is a labeled statement
         auto label = tokens_.peek().getLexeme();
         auto location = tokens_.peek().getLocation();
@@ -50,41 +53,81 @@ public:
                                                              location);
       }
 
+      // Special handling for return statements
+      if (tokens_.peek().getLexeme() == "return") {
+        tokens_.advance(); // Consume "return"
+        auto location = tokens_.previous().getLocation();
+        nodes::ExpressionPtr value;
+
+        // Check for value after return
+        if (tokens_.peek().getLexeme() != ";") {
+          value = exprVisitor_.parseExpression();
+          if (!value)
+            return nullptr;
+        }
+
+        if (tokens_.peek().getLexeme() != ";") {
+          error("Expected ';' after return statement");
+          return nullptr;
+        }
+        tokens_.advance(); // Consume semicolon
+
+        return std::make_shared<nodes::ReturnStmtNode>(value, location);
+      }
+
+      // Check for declarations
       if (isDeclarationStart()) {
         return parseDeclarationStatement();
       }
 
-      if (match(tokens::TokenType::LEFT_BRACE)) {
+      // Check for other statement types
+      if (tokens_.peek().getLexeme() == "{") {
+        tokens_.advance(); // Consume '{'
         return parseBlock();
       }
-      if (match(tokens::TokenType::IF)) {
+
+      if (tokens_.peek().getLexeme() == "if") {
+        tokens_.advance();
         return branchVisitor_.parseIfStatement();
       }
-      if (match(tokens::TokenType::SWITCH)) {
+
+      if (tokens_.peek().getLexeme() == "switch") {
+        tokens_.advance();
         return branchVisitor_.parseSwitchStatement();
       }
-      if (match(tokens::TokenType::WHILE)) {
+
+      if (tokens_.peek().getLexeme() == "while") {
+        tokens_.advance();
         return loopVisitor_.parseWhileStatement();
       }
-      if (match(tokens::TokenType::DO)) {
+
+      if (tokens_.peek().getLexeme() == "do") {
+        tokens_.advance();
         return loopVisitor_.parseDoWhileStatement();
       }
-      if (match(tokens::TokenType::FOR)) {
+
+      if (tokens_.peek().getLexeme() == "for") {
+        tokens_.advance();
         return loopVisitor_.parseForStatement();
       }
-      if (match(tokens::TokenType::TRY)) {
+
+      if (tokens_.peek().getLexeme() == "try") {
+        tokens_.advance();
         return tryVisitor_.parseTryStatement();
       }
-      if (match(tokens::TokenType::RETURN)) {
-        return flowVisitor_.parseReturn();
-      }
-      if (match(tokens::TokenType::BREAK)) {
+
+      if (tokens_.peek().getLexeme() == "break") {
+        tokens_.advance();
         return flowVisitor_.parseBreak();
       }
-      if (match(tokens::TokenType::CONTINUE)) {
+
+      if (tokens_.peek().getLexeme() == "continue") {
+        tokens_.advance();
         return flowVisitor_.parseContinue();
       }
-      if (match(tokens::TokenType::THROW)) {
+
+      if (tokens_.peek().getLexeme() == "throw") {
+        tokens_.advance();
         return flowVisitor_.parseThrow();
       }
 
@@ -100,19 +143,34 @@ public:
     auto location = tokens_.previous().getLocation();
     std::vector<nodes::StmtPtr> statements;
 
-    while (!check(tokens::TokenType::RIGHT_BRACE) && !tokens_.isAtEnd()) {
+    while (!tokens_.isAtEnd()) {
 
+      // Check for end of block
+      if (tokens_.peek().getLexeme() == "}") {
+        break;
+      }
+
+      // Regular statement parsing
       if (auto stmt = parseStatement()) {
         statements.push_back(std::move(stmt));
       } else {
-        // If parsing failed, print current token
         synchronize();
+
+        // Check if we've recovered to a block end
+        if (tokens_.peek().getLexeme() == "}" || tokens_.isAtEnd()) {
+          break;
+        }
       }
     }
 
-    if (!consume(tokens::TokenType::RIGHT_BRACE, "Expected '}' after block")) {
+    // Check for closing brace
+    if (tokens_.peek().getLexeme() != "}") {
+      error("Expected '}' after block");
       return nullptr;
     }
+
+    // Advance past the closing brace
+    tokens_.advance();
 
     return std::make_shared<nodes::BlockNode>(std::move(statements), location);
   }
@@ -129,25 +187,19 @@ private:
   }
 
   bool isDeclarationStart() const {
-    // Check for class-related declarations too
-    return check(tokens::TokenType::LET) || check(tokens::TokenType::CONST) ||
-           check(tokens::TokenType::FUNCTION) ||
-           check(tokens::TokenType::CLASS) ||       // Added CLASS
-           check(tokens::TokenType::CONSTRUCTOR) || // Added CONSTRUCTOR
-           check(tokens::TokenType::PUBLIC) ||      // Added access modifiers
-           check(tokens::TokenType::PRIVATE) ||
-           check(tokens::TokenType::PROTECTED) ||
-           check(tokens::TokenType::STACK) || check(tokens::TokenType::HEAP) ||
-           check(tokens::TokenType::STATIC) ||
-           check(tokens::TokenType::ALIGNED) || // Added class modifiers
-           check(tokens::TokenType::PACKED) ||
-           check(tokens::TokenType::ABSTRACT);
+    std::string lexeme = tokens_.peek().getLexeme();
+    // Check for class-related declarations using lexemes
+    return lexeme == "let" || lexeme == "const" || lexeme == "function" ||
+           lexeme == "class" || lexeme == "constructor" || lexeme == "public" ||
+           lexeme == "private" || lexeme == "protected" || lexeme == "stack" ||
+           lexeme == "heap" || lexeme == "static" || lexeme == "aligned" ||
+           lexeme == "packed" || lexeme == "abstract";
   }
 
   nodes::StmtPtr parseExpressionStatement();
   nodes::StmtPtr parseAssemblyStatement();
 
-  // Add these utility methods if not already present
+  // Utility methods
   inline bool match(tokens::TokenType type) {
     if (check(type)) {
       tokens_.advance();
@@ -177,30 +229,25 @@ private:
     tokens_.advance();
 
     while (!tokens_.isAtEnd()) {
-      if (tokens_.previous().getType() == tokens::TokenType::SEMICOLON) {
+      if (tokens_.previous().getLexeme() == ";") {
         return;
       }
 
-      switch (tokens_.peek().getType()) {
-      case tokens::TokenType::CLASS:
-      case tokens::TokenType::FUNCTION:
-      case tokens::TokenType::LET:
-      case tokens::TokenType::CONST:
-      case tokens::TokenType::IF:
-      case tokens::TokenType::WHILE:
-      case tokens::TokenType::RETURN:
+      // Use lexemes for keyword checks
+      std::string lexeme = tokens_.peek().getLexeme();
+      if (lexeme == "class" || lexeme == "function" || lexeme == "let" ||
+          lexeme == "const" || lexeme == "if" || lexeme == "while" ||
+          lexeme == "return" || lexeme == "}" || lexeme == "{") {
         return;
-      default:
-        tokens_.advance();
       }
+      tokens_.advance();
     }
   }
 
   tokens::TokenStream &tokens_;
   core::ErrorReporter &errorReporter_;
   IExpressionVisitor &exprVisitor_;
-  IDeclarationVisitor *declVisitor_ =
-      nullptr; // Now a pointer, set after construction
+  IDeclarationVisitor *declVisitor_ = nullptr;
 
   BranchStatementVisitor branchVisitor_;
   LoopStatementVisitor loopVisitor_;
