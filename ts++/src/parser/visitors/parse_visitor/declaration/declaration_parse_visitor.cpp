@@ -208,18 +208,20 @@ nodes::TypePtr DeclarationParseVisitor::parseType() {
     return parseSmartPointerType(location);
   }
 
-  // Handle template types like Vector<T>
+  nodes::TypePtr type;
+  // If the next token is IDENTIFIER and the following token is '<', then it's a
+  // template type.
   if (check(tokens::TokenType::IDENTIFIER) &&
       tokens_.peekNext().getType() == tokens::TokenType::LESS) {
-    return parseTemplateType(location);
+    type = parseTemplateType(location);
+  } else {
+    // Otherwise, parse a primary type.
+    type = parsePrimaryType();
   }
-
-  // Parse the base type
-  nodes::TypePtr type = parsePrimaryType();
   if (!type)
     return nullptr;
 
-  // Keep parsing modifiers as long as possible
+  // Keep parsing type modifiers as long as possible.
   while (true) {
     if (match(tokens::TokenType::AT)) {
       type = parsePointerType(type, location);
@@ -237,6 +239,7 @@ nodes::TypePtr DeclarationParseVisitor::parseType() {
         return nullptr;
     } else if (check(tokens::TokenType::IDENTIFIER) &&
                tokens_.peekNext().getType() == tokens::TokenType::LESS) {
+      // In case there is an additional template modifier.
       type = parseTemplateType(location);
       if (!type)
         return nullptr;

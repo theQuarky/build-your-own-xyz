@@ -1,5 +1,3 @@
-// test_class_declaration.tspp
-
 // Simple class with no generic parameters
 #aligned class SimpleClass {
     // Field declarations
@@ -60,27 +58,27 @@ class DataProcessor extends BaseProcessor implements Serializable, Observable {
 
 // Class with multiple generic parameters and different constraints
 class KeyValueStore<K extends Hashable, V> {
-    // private let data: Entry<K, V>[] = [];
+    private let data: Entry<K, V>[] = [];
 
-    // public function set_(key: K, value: V): void {
-    //     // Implementation
-    // }
+    public function set_(key: K, value: V): void {
+        // Implementation
+    }
 
-    // public function get_(key: K): V {
-    //     // Implementation
-    //     return this.data[0].value;
-    // }
+    public function get_(key: K): V {
+        // Implementation
+        return this.data[0].value;
+    }
 
-    // // Nested class
-    // private class Entry<KeyType, ValueType> {
-    //     public let key: KeyType;
-    //     public let value: ValueType;
+    // Nested class
+    private class Entry<KeyType, ValueType> {
+        public let key: KeyType;
+        public let value: ValueType;
 
-    //     public constructor(key: KeyType, value: ValueType) {
-    //         this.key = key;
-    //         this.value = value;
-    //     }
-    // }
+        public constructor(key: KeyType, value: ValueType) {
+            this.key = key;
+            this.value = value;
+        }
+    }
 }
 
 // Class with attributes and smart pointers
