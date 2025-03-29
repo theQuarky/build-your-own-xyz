@@ -1,110 +1,93 @@
-// test_class_declaration.tspp
+// This sample TSPP file demonstrates various language features, except for interfaces and enums.
 
-// Simple class with no generic parameters
-#aligned class SimpleClass {
-    // Field declarations
-    private let count: int = 0;
-    public const MAX_SIZE: int = 100;
+#static let globalCounter: int = 100;
 
-    // Constructor
-    constructor() {
-        this.count = 0;
+function increment(x: int): int {
+    return x + 1;
+}
+
+function pointerExample(): int {
+    // Declare a pointer to int using the address-of operator.
+    let p: int@ = @globalCounter;
+    return *p + 10;
+}
+
+function identity<T>(value: T): T {
+    return value;
+}
+
+// namespace MathOps {
+//     function subtract(a: int, b: int): int {
+//         return a - b;
+//     }
+    
+//     function multiply(a: int, b: int): int {
+//         return a * b;
+//     }
+// }
+
+class Calculator {
+    #packed let memory: int;
+
+    // Constructor declaration.
+    function Calculator(initial: int): void {
+        this.memory = initial;
     }
-
-    // Method
-    public function increment(): int {
-        this.count = this.count + 1;
-        return this.count;
+    
+    // Inline method to add two integers.
+    #inline function add(a: int, b: int): int {
+        return a + b;
     }
-
-    // Property getter
-    public get currentCount: int {
-        return this.count;
-    }
-
-    // Property setter
-    public set maxSize(value: int) {
-        if (value > 0) {
-            this.MAX_SIZE = value;
+    
+    // A method demonstrating control flow with a loop and conditional statements.
+    function compute(): int {
+        let total: int = 0;
+        // Standard for-loop (using ForStmt syntax).
+        for (let i = 0; i < 5; i++) {
+            total += i;
         }
+        if (total > 10) {
+            total = this.add(total, 5);
+        } else {
+            total = this.add(total, -5);
+        }
+        return total;
+    }
+    
+    function updateMemory(newVal: int): void {
+        this.memory = newVal;
     }
 }
 
-// Generic class with type constraint
-class Container<T extends Comparable> {
-    private let items: T[] = [];
-
-    public function add(item: T): void {
-        this.items.push(item);
-    }
-
-    public function getAt(index: int): T {
-        return this.items[index];
+function printArray(arr: int[]): void {
+    // For-each loop to iterate over an array.
+    for (let num of arr) {
+        print("Array element: " + num);
     }
 }
 
-// Class with inheritance and multiple interfaces
-class DataProcessor extends BaseProcessor implements Serializable, Observable {
-    #inline public function process(): void {
-        // Implementation
-    }
-
-    public function serialize(): string {
-        return "serialized data";
-    }
-
-    public function subscribe(observer: Observer): void {
-        // Implementation
-    }
+function main(): void {
+    let result1: int = increment(5);
+    let result2: int = pointerExample();
+    let value: int = identity<int>(42);
+    print("Increment result: " + result1);
+    print("Pointer example result: " + result2);
+    print("Identity function result: " + value);
+    
+    let calc: Calculator = new Calculator(10);
+    calc.updateMemory(20);
+    let computeResult: int = calc.compute();
+    print("Calculator compute result: " + computeResult);
+    
+    // Array literal usage.
+    let numbers: int[] = [1, 2, 3, 4, 5];
+    printArray(numbers);
+    
+    // Using functions defined within a namespace.
+    let diff: int = MathOps.subtract(10, 3);
+    let prod: int = MathOps.multiply(4, 5);
+    print("Subtraction result: " + diff);
+    print("Multiplication result: " + prod);
 }
 
-// Class with multiple generic parameters and different constraints
-class KeyValueStore<K extends Hashable, V> {
-    // private let data: Entry<K, V>[] = [];
-
-    // public function set_(key: K, value: V): void {
-    //     // Implementation
-    // }
-
-    // public function get_(key: K): V {
-    //     // Implementation
-    //     return this.data[0].value;
-    // }
-
-    // // Nested class
-    // private class Entry<KeyType, ValueType> {
-    //     public let key: KeyType;
-    //     public let value: ValueType;
-
-    //     public constructor(key: KeyType, value: ValueType) {
-    //         this.key = key;
-    //         this.value = value;
-    //     }
-    // }
-}
-
-// Class with attributes and smart pointers
-#packed class ResourceManager {
-    private let resource: #shared<Resource>;
-
-    public function getResource(): #shared<Resource> {
-        return this.resource;
-    }
-
-    #unsafe public function getRawPointer(): Resource@ {
-        return *this.resource;
-    }
-}
-
-// Abstract class with virtual methods
-#abstract class Shape {
-    public let color: string = "white";
-
-    #virtual public function calculateArea(): float {
-        return 0.0;
-    }
-
-    public function setColor(color: string): void {
-        this.color = color;
-    }
-}
+main();

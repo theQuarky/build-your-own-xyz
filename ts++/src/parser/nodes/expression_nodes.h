@@ -142,16 +142,22 @@ private:
 class CallExpressionNode : public ExpressionNode {
 public:
   CallExpressionNode(const core::SourceLocation &loc, ExpressionPtr callee,
-                     std::vector<ExpressionPtr> arguments)
+                     std::vector<ExpressionPtr> arguments,
+                     std::vector<std::string> typeArguments = {})
       : ExpressionNode(loc, tokens::TokenType::LEFT_PAREN),
-        callee_(std::move(callee)), arguments_(std::move(arguments)) {}
+        callee_(std::move(callee)), arguments_(std::move(arguments)),
+        typeArguments_(std::move(typeArguments)) {}
 
   ExpressionPtr getCallee() const { return callee_; }
   const std::vector<ExpressionPtr> &getArguments() const { return arguments_; }
+  const std::vector<std::string> &getTypeArguments() const {
+    return typeArguments_;
+  }
 
 private:
   ExpressionPtr callee_;
   std::vector<ExpressionPtr> arguments_;
+  std::vector<std::string> typeArguments_; // New member for generic type args
 };
 
 // Member access expression (obj.member, ptr@member)

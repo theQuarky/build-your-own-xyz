@@ -65,6 +65,7 @@ private:
     case tokens::TokenType::PLUS_PLUS:   // ++
     case tokens::TokenType::MINUS_MINUS: // --
     case tokens::TokenType::STAR:        // *
+    case tokens::TokenType::AT:
       return true;
     default:
       return false;
@@ -88,7 +89,6 @@ private:
     case tokens::TokenType::TILDE:       // ~
     case tokens::TokenType::PLUS_PLUS:   // ++
     case tokens::TokenType::MINUS_MINUS: // --
-    case tokens::TokenType::STAR:        // *
       return true;
     default:
       return false;

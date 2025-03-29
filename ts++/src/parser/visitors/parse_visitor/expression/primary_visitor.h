@@ -24,6 +24,8 @@ public:
 
   // Parses a primary expression (array literals, "this", identifiers, literals,
   // or parenthesized expressions)
+  // Parses a primary expression (array literals, "this", identifiers, literals,
+  // or parenthesized expressions)
   nodes::ExpressionPtr parsePrimary() {
     // Handle array literals: [1, 2, 3]
     if (match(tokens::TokenType::LEFT_BRACKET)) {
@@ -43,6 +45,62 @@ public:
       auto token = tokens_.previous();
       auto expr = std::make_shared<nodes::IdentifierExpressionNode>(
           token.getLocation(), token.getLexeme());
+
+      // Check for generic function call with lookahead
+      if (check(tokens::TokenType::LESS)) {
+        // Save current position before lookahead
+        size_t savedPos = tokens_.savePosition();
+
+        tokens_.advance(); // Consume '<'
+
+        // Check if next token is a type name (identifier or primitive type)
+        bool isGenericCall = false;
+        if (check(tokens::TokenType::IDENTIFIER) ||
+            (tokens_.peek().getType() >= tokens::TokenType::TYPE_BEGIN &&
+             tokens_.peek().getType() <= tokens::TokenType::TYPE_END)) {
+
+          tokens_.advance(); // Skip type name
+
+          // Keep going until we find '>' or fail
+          while (!tokens_.isAtEnd()) {
+            // If we find a '>', it's a valid generic syntax
+            if (check(tokens::TokenType::GREATER)) {
+              // Look ahead one more to see if followed by '('
+              tokens_.advance(); // Consume '>'
+              if (check(tokens::TokenType::LEFT_PAREN)) {
+                isGenericCall = true;
+              }
+              break;
+            }
+            // Allow commas for multiple type arguments
+            else if (check(tokens::TokenType::COMMA)) {
+              tokens_.advance();
+              // Next token should be a type
+              if (!(check(tokens::TokenType::IDENTIFIER) ||
+                    (tokens_.peek().getType() >=
+                         tokens::TokenType::TYPE_BEGIN &&
+                     tokens_.peek().getType() <=
+                         tokens::TokenType::TYPE_END))) {
+                break; // Not a valid generic syntax
+              }
+              tokens_.advance(); // Skip type name
+            } else {
+              // Not a valid generic syntax
+              break;
+            }
+          }
+        }
+
+        // Restore position regardless of outcome
+        tokens_.restorePosition(savedPos);
+
+        // If we detected a generic call, parse it
+        if (isGenericCall) {
+          return parseGenericFunctionCall(expr);
+        }
+      }
+
+      // Normal postfix operations (not a generic call)
       return parsePostfixOperations(expr);
     }
 
@@ -70,6 +128,73 @@ public:
 
     error("Expected expression");
     return nullptr;
+  }
+
+  // Parse a generic function call: identifier<Type>(args)
+  nodes::ExpressionPtr parseGenericFunctionCall(nodes::ExpressionPtr expr) {
+    // Parse the opening "<" - we already checked it exists
+    tokens_.advance(); // Consume '<'
+
+    // Parse type arguments
+    std::vector<std::string> typeArgs;
+    do {
+      // Check for a type name (identifier or primitive type)
+      if (check(tokens::TokenType::IDENTIFIER) ||
+          (tokens_.peek().getType() >= tokens::TokenType::TYPE_BEGIN &&
+           tokens_.peek().getType() <= tokens::TokenType::TYPE_END)) {
+
+        // Save the type argument name
+        typeArgs.push_back(tokens_.peek().getLexeme());
+        tokens_.advance(); // Consume the type name
+      } else {
+        error("Expected type name in generic type arguments");
+        return nullptr;
+      }
+
+      // Continue if there's a comma
+      if (!check(tokens::TokenType::COMMA)) {
+        break;
+      }
+      tokens_.advance(); // Consume comma
+
+    } while (!tokens_.isAtEnd());
+
+    // Expect the closing ">"
+    if (!consume(tokens::TokenType::GREATER,
+                 "Expected '>' after generic type arguments")) {
+      return nullptr;
+    }
+
+    // Expect the function call opening parenthesis
+    if (!consume(tokens::TokenType::LEFT_PAREN,
+                 "Expected '(' after generic type arguments")) {
+      return nullptr;
+    }
+
+    // Parse function arguments
+    std::vector<nodes::ExpressionPtr> args;
+    if (!check(tokens::TokenType::RIGHT_PAREN)) {
+      do {
+        auto arg = parentVisitor_.parseExpression();
+        if (!arg) {
+          return nullptr;
+        }
+        args.push_back(std::move(arg));
+      } while (match(tokens::TokenType::COMMA));
+    }
+
+    // Expect the closing ")"
+    if (!consume(tokens::TokenType::RIGHT_PAREN,
+                 "Expected ')' after function arguments")) {
+      return nullptr;
+    }
+
+    // Create the call expression node with type arguments
+    nodes::ExpressionPtr callExpr = std::make_shared<nodes::CallExpressionNode>(
+        expr->getLocation(), expr, std::move(args), std::move(typeArgs));
+
+    // Continue parsing any additional postfix operations
+    return parsePostfixOperations(callExpr);
   }
 
   // Parses postfix operations such as member access, array indexing, and

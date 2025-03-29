@@ -451,6 +451,9 @@ private:
     } else if (auto newExpr =
                    dynamic_cast<const nodes::NewExpressionNode *>(expr)) {
       visitNewExpr(newExpr);
+    } else if (auto callExpt =
+                   dynamic_cast<const nodes::CallExpressionNode *>(expr)) {
+      visitCallExpt(callExpt);
     }
     // Generic expression fallback.
     else {
@@ -684,6 +687,38 @@ private:
       const auto &args = node->getArguments();
       if (!args.empty()) {
         printLine("Arguments:");
+        withIndent([&]() {
+          for (const auto &arg : args) {
+            visitExpr(arg.get());
+          }
+        });
+      }
+    });
+  }
+
+  void visitCallExpt(const nodes::CallExpressionNode *node) {
+    indent();
+    if (auto identNode = dynamic_cast<nodes::IdentifierExpressionNode *>(
+            node->getCallee().get())) {
+      // For simple function calls like: functionName()
+      std::string functionName = identNode->getName();
+
+      std::cout << "CallExpression: " << functionName << "\n";
+    }
+    withIndent([&]() {
+      const auto &typeArgs = node->getTypeArguments();
+      if (!typeArgs.empty()) {
+        printLine("Generic Arguments: ");
+        withIndent([&]() {
+          indent();
+          for (const auto &typeArg : typeArgs) {
+            std::cout << typeArg << "\n";
+          }
+        });
+      }
+      const auto &args = node->getArguments();
+      if (!args.empty()) {
+        printLine("Arguments: ");
         withIndent([&]() {
           for (const auto &arg : args) {
             visitExpr(arg.get());
