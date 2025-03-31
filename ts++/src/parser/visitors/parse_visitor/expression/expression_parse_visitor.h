@@ -12,26 +12,32 @@
 #include <cassert>
 
 namespace visitors {
-
 class ExpressionParseVisitor : public IExpressionVisitor {
 public:
-  // Update constructor signature in header
   ExpressionParseVisitor(tokens::TokenStream &tokens,
                          core::ErrorReporter &errorReporter,
                          IDeclarationVisitor *declVisitor = nullptr,
                          IStatementVisitor *stmtVisitor = nullptr);
 
+  // Add setter methods (similar to StatementParseVisitor)
+  void setDeclarationVisitor(IDeclarationVisitor *declVisitor) {
+    declVisitor_ = declVisitor;
+  }
+
+  void setStatementVisitor(IStatementVisitor *stmtVisitor) {
+    stmtVisitor_ = stmtVisitor;
+  }
   // Main public interface
   nodes::ExpressionPtr parseExpression() override;
   nodes::ExpressionPtr parsePrimary() override;
   nodes::ExpressionPtr parseUnary() override;
   nodes::TypePtr parseType() override;
   nodes::ExpressionPtr parseNewExpression() override;
+  nodes::ExpressionPtr parseFunctionExpression() override;
   nodes::ExpressionPtr parseAdditive();
   nodes::ExpressionPtr parseAssignment();
   nodes::ExpressionPtr parseMultiplicative();
   nodes::ExpressionPtr parseComparison();
-  nodes::ExpressionPtr parseFunctionExpression();
   nodes::ParamPtr parseParameter();
 
   // Friend declarations for sub-visitors

@@ -1,5 +1,6 @@
 #include "expression_parse_visitor.h"
 #include "parser/nodes/declaration_nodes.h"
+#include <iostream>
 
 namespace visitors {
 
@@ -185,8 +186,7 @@ nodes::ExpressionPtr ExpressionParseVisitor::parseFunctionExpression() {
   std::vector<nodes::ParamPtr> parameters;
   if (!check(tokens::TokenType::RIGHT_PAREN)) {
     do {
-      auto param =
-          parseParameter(); // You'll need to implement or reuse this method
+      auto param = parseParameter();
       if (!param) {
         return nullptr;
       }
@@ -246,6 +246,12 @@ nodes::ParamPtr ExpressionParseVisitor::parseParameter() {
 
   // Parse parameter type
   if (!consume(tokens::TokenType::COLON, "Expected ':' after parameter name")) {
+    return nullptr;
+  }
+
+  // Check if declVisitor_ is null before calling parseType()
+  if (!declVisitor_) {
+    error("Internal error: Type parser is not available");
     return nullptr;
   }
 

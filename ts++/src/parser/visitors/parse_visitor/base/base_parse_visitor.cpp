@@ -12,7 +12,7 @@ BaseParseVisitor::BaseParseVisitor(tokens::TokenStream &tokens,
   expressionVisitor_ =
       std::make_unique<ExpressionParseVisitor>(tokens, errorReporter);
 
-  // Create statement visitor with just expression visitor
+  // Create statement visitor with expression visitor
   statementVisitor_ = std::make_unique<StatementParseVisitor>(
       tokens, errorReporter, *expressionVisitor_);
 
@@ -22,6 +22,12 @@ BaseParseVisitor::BaseParseVisitor(tokens::TokenStream &tokens,
 
   // Now set the declaration visitor on the statement visitor
   statementVisitor_->setDeclarationVisitor(declarationVisitor_.get());
+
+  // Also set the declaration visitor on the expression visitor
+  expressionVisitor_->setDeclarationVisitor(declarationVisitor_.get());
+
+  // And set the statement visitor on the expression visitor
+  expressionVisitor_->setStatementVisitor(statementVisitor_.get());
 }
 
 // Rest of the implementation remains the same

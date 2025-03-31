@@ -127,7 +127,7 @@ class ArrayContainer<T extends Comparable> implements Container<T> {
         // Add item to array
     }
     
-    public function get(index: int): T {
+    public function get_(index: int): T {
         return this.items[index];
     }
     
