@@ -36,7 +36,7 @@ nodes::DeclPtr DeclarationParseVisitor::parseDeclaration() {
     }
 
     // Check for interface declaration
-    if (check(tokens::TokenType::ZEROCAST) ||
+    if (tokens_.getCurrentToken().getLexeme() == "#zerocast" ||
         check(tokens::TokenType::INTERFACE)) {
       return interfaceVisitor_->parseInterfaceDecl();
     }

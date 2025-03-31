@@ -4,6 +4,9 @@
 #include "parser/nodes/declaration_nodes.h"
 #include "parser/visitors/parse_visitor/expression/iexpression_visitor.h"
 #include "tokens/stream/token_stream.h"
+#include "tokens/token_type.h"
+#include <iostream>
+#include <ostream>
 #include <vector>
 
 namespace visitors {
@@ -27,11 +30,12 @@ public:
 
     // Check for #zerocast attribute
     bool isZeroCast = false;
-    if (check(tokens::TokenType::ZEROCAST)) {
+    if (tokens_.getCurrentToken().getLexeme() == "#zerocast") {
       isZeroCast = true;
       tokens_.advance();
     }
-
+    std::cout << "current token: " << tokens_.getCurrentToken().getLexeme()
+              << std::endl;
     // Expect 'interface' keyword
     if (!consume(tokens::TokenType::INTERFACE,
                  "Expected 'interface' keyword")) {

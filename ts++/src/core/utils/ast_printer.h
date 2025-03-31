@@ -317,6 +317,53 @@ private:
     }
   }
 
+  void visitInterfaceDecl(const nodes::InterfaceDeclNode *node) {
+    printLine("InterfaceDecl " + getLocationString(node->getLocation()), BLUE);
+    withIndent([&]() {
+      printLine("Name: '" + node->getName() + "'");
+
+      // Print if zerocast
+      if (node->isZeroCast()) {
+        printLine("ZeroCast: true");
+      }
+
+      // Check if this is a generic interface
+      if (auto genericInterface =
+              dynamic_cast<const nodes::GenericInterfaceDeclNode *>(node)) {
+        if (!genericInterface->getGenericParams().empty()) {
+          printLine("Generic Parameters:");
+          withIndent([&]() {
+            for (const auto &param : genericInterface->getGenericParams()) {
+              visitType(param.get());
+            }
+          });
+        }
+      }
+
+      // Print extended interfaces
+      const auto &extended = node->getExtendedInterfaces();
+      if (!extended.empty()) {
+        printLine("Extends:");
+        withIndent([&]() {
+          for (const auto &iface : extended) {
+            visitType(iface.get());
+          }
+        });
+      }
+
+      // Print members
+      const auto &members = node->getMembers();
+      if (!members.empty()) {
+        printLine("Members:");
+        withIndent([&]() {
+          for (const auto &member : members) {
+            print(member);
+          }
+        });
+      }
+    });
+  }
+
   void visitParameter(const nodes::ParameterNode *node) {
     printLine("Parameter '" + node->getName() + "' " +
                   getLocationString(node->getLocation()),
@@ -830,6 +877,55 @@ private:
     withIndent([&]() { visitStmt(node->getStatement().get()); });
   }
 
+  void visitMethodSignature(const nodes::MethodSignatureNode *node) {
+    printLine("MethodSignature '" + node->getName() + "' " +
+                  getLocationString(node->getLocation()),
+              YELLOW);
+    withIndent([&]() {
+      printLine("Access: " + tokenTypeToString(node->getAccessModifier()));
+
+      const auto &parameters = node->getParameters();
+      if (!parameters.empty()) {
+        printLine("Parameters:");
+        withIndent([&]() {
+          for (const auto &param : parameters)
+            visitParameter(param.get());
+        });
+      }
+
+      if (node->getReturnType()) {
+        printLine("Return Type:");
+        withIndent([&]() { visitType(node->getReturnType().get()); });
+      }
+
+      if (!node->getThrowsTypes().empty()) {
+        printLine("Throws:");
+        withIndent([&]() {
+          for (const auto &throwType : node->getThrowsTypes())
+            visitType(throwType.get());
+        });
+      }
+    });
+  }
+
+  void visitPropertySignature(const nodes::PropertySignatureNode *node) {
+    printLine("PropertySignature '" + node->getName() + "' " +
+                  getLocationString(node->getLocation()),
+              YELLOW);
+    withIndent([&]() {
+      printLine("Access: " + tokenTypeToString(node->getAccessModifier()));
+
+      if (node->getType()) {
+        printLine("Type:");
+        withIndent([&]() { visitType(node->getType().get()); });
+      }
+
+      if (node->hasGetter())
+        printLine("Has Getter: true");
+      if (node->hasSetter())
+        printLine("Has Setter: true");
+    });
+  }
   //---------------------------------------------------------------------------
   // Utility Functions
   //---------------------------------------------------------------------------
@@ -971,6 +1067,9 @@ public:
       else if (auto enumDecl =
                    std::dynamic_pointer_cast<nodes::EnumDeclNode>(node))
         visitEnumDecl(enumDecl.get());
+      else if (auto interfaceDecl =
+                   std::dynamic_pointer_cast<nodes::InterfaceDeclNode>(node))
+        visitInterfaceDecl(interfaceDecl.get());
       else {
         indent();
         std::cout << RED << "Unknown node type at gfgfgf"
@@ -1040,6 +1139,24 @@ public:
     else if (auto propertyDecl =
                  std::dynamic_pointer_cast<nodes::PropertyDeclNode>(node))
       visitPropertyDecl(propertyDecl.get());
+    else if (auto propertyDecl =
+                 std::dynamic_pointer_cast<nodes::PropertyDeclNode>(node))
+      visitPropertyDecl(propertyDecl.get());
+    // Add to your print method for NodePtr
+    else if (auto methodSig =
+                 std::dynamic_pointer_cast<nodes::MethodSignatureNode>(node))
+      visitMethodSignature(methodSig.get());
+    else if (auto propSig =
+                 std::dynamic_pointer_cast<nodes::PropertySignatureNode>(node))
+      visitPropertySignature(propSig.get());
+
+    // Add to your print method for AST nodes too
+    else if (auto methodSig =
+                 std::dynamic_pointer_cast<nodes::MethodSignatureNode>(node))
+      visitMethodSignature(methodSig.get());
+    else if (auto propSig =
+                 std::dynamic_pointer_cast<nodes::PropertySignatureNode>(node))
+      visitPropertySignature(propSig.get());
     else {
       indent();
       std::cout << RED << "Unknown node type at "
