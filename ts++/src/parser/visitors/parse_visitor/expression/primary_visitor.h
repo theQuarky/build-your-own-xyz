@@ -201,6 +201,8 @@ public:
   // function calls.
   nodes::ExpressionPtr parsePostfixOperations(nodes::ExpressionPtr expr) {
     while (true) {
+      std::cout << "should not be here \n";
+
       // Handle member access: e.g. obj.property (for "this._width")
       if (match(tokens::TokenType::DOT)) {
         if (tokens_.peek().getType() != tokens::TokenType::IDENTIFIER) {

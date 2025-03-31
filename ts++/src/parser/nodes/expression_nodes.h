@@ -10,6 +10,13 @@
 
 namespace nodes {
 
+class ParameterNode;
+using ParamPtr = std::shared_ptr<ParameterNode>;
+class BlockNode;
+using BlockPtr = std::shared_ptr<BlockNode>;
+class TypeNode;
+using TypePtr = std::shared_ptr<TypeNode>;
+
 /**
  * @brief Base class for all expression nodes
  */
@@ -316,4 +323,30 @@ private:
   ExpressionPtr
       argument_; // Optional argument for the attribute (can be nullptr)
 };
+
+/**
+ * Function expression node (for anonymous functions)
+ */
+class FunctionExpressionNode : public ExpressionNode {
+public:
+  FunctionExpressionNode(std::vector<ParamPtr> parameters, TypePtr returnType,
+                         BlockPtr body, const core::SourceLocation &loc)
+      : ExpressionNode(loc, tokens::TokenType::FUNCTION),
+        parameters_(std::move(parameters)), returnType_(std::move(returnType)),
+        body_(std::move(body)) {}
+
+  const std::vector<ParamPtr> &getParameters() const { return parameters_; }
+  TypePtr getReturnType() const { return returnType_; }
+  BlockPtr getBody() const { return body_; }
+
+  bool accept(interface::BaseInterface *visitor) override {
+    return visitor->visitParse();
+  }
+
+private:
+  std::vector<ParamPtr> parameters_;
+  TypePtr returnType_;
+  BlockPtr body_;
+};
+
 } // namespace nodes

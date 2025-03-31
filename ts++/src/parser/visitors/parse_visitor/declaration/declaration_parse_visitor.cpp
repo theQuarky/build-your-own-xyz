@@ -14,12 +14,42 @@ DeclarationParseVisitor::DeclarationParseVisitor(
       stmtVisitor_(stmtVisitor),
       varDeclVisitor_(tokens, errorReporter, exprVisitor, *this),
       funcDeclVisitor_(tokens, errorReporter, exprVisitor, *this, stmtVisitor),
-      classDeclVisitor_(tokens, errorReporter, *this, exprVisitor,
-                        stmtVisitor) {}
+      classDeclVisitor_(tokens, errorReporter, *this, exprVisitor, stmtVisitor),
+      // Initialize the new visitor components
+      namespaceVisitor_(std::make_unique<NamespaceParseVisitor>(
+          tokens, errorReporter, *this)),
+      interfaceVisitor_(std::make_unique<InterfaceParseVisitor>(
+          tokens, errorReporter, *this, exprVisitor)),
+      enumVisitor_(std::make_unique<EnumParseVisitor>(tokens, errorReporter,
+                                                      *this, exprVisitor)),
+      typedefVisitor_(
+          std::make_unique<TypedefParseVisitor>(tokens, errorReporter, *this)) {
+}
 
 nodes::DeclPtr DeclarationParseVisitor::parseDeclaration() {
   try {
     auto location = tokens_.peek().getLocation();
+
+    // Check for namespace declaration
+    if (check(tokens::TokenType::NAMESPACE)) {
+      return namespaceVisitor_->parseNamespaceDecl();
+    }
+
+    // Check for interface declaration
+    if (check(tokens::TokenType::ZEROCAST) ||
+        check(tokens::TokenType::INTERFACE)) {
+      return interfaceVisitor_->parseInterfaceDecl();
+    }
+
+    // Check for enum declaration
+    if (check(tokens::TokenType::ENUM)) {
+      return enumVisitor_->parseEnumDecl();
+    }
+
+    // Check for typedef declaration
+    if (check(tokens::TokenType::TYPEDEF)) {
+      return typedefVisitor_->parseTypedefDecl();
+    }
 
     // Check for access modifiers first (for class members)
     tokens::TokenType accessModifier = tokens::TokenType::ERROR_TOKEN;
@@ -459,6 +489,34 @@ nodes::AttributePtr DeclarationParseVisitor::parseAttribute() {
   }
 
   return std::make_shared<nodes::AttributeNode>(lexeme, argument, location);
+}
+
+nodes::DeclPtr DeclarationParseVisitor::parseNamespaceDecl() {
+  if (namespaceVisitor_) {
+    return namespaceVisitor_->parseNamespaceDecl();
+  }
+  return nullptr;
+}
+
+nodes::DeclPtr DeclarationParseVisitor::parseInterfaceDecl() {
+  if (interfaceVisitor_) {
+    return interfaceVisitor_->parseInterfaceDecl();
+  }
+  return nullptr;
+}
+
+nodes::DeclPtr DeclarationParseVisitor::parseEnumDecl() {
+  if (enumVisitor_) {
+    return enumVisitor_->parseEnumDecl();
+  }
+  return nullptr;
+}
+
+nodes::DeclPtr DeclarationParseVisitor::parseTypedefDecl() {
+  if (typedefVisitor_) {
+    return typedefVisitor_->parseTypedefDecl();
+  }
+  return nullptr;
 }
 
 bool DeclarationParseVisitor::consume(tokens::TokenType type,

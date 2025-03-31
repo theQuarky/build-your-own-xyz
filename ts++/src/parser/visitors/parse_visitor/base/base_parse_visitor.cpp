@@ -1,6 +1,7 @@
 // base_parse_visitor.cpp
 #include "base_parse_visitor.h"
 #include "tokens/token_type.h"
+#include <iostream>
 
 namespace visitors {
 
@@ -73,11 +74,17 @@ bool BaseParseVisitor::isDeclarationStart() const {
          tokens_.check(tokens::TokenType::ATTRIBUTE) ||
          tokens_.check(tokens::TokenType::LET) ||
          tokens_.check(tokens::TokenType::CONST) ||
-         tokens_.check(tokens::TokenType::FUNCTION) ||
+         (tokens_.check(tokens::TokenType::FUNCTION) &&
+          tokens_.peek().getType() == tokens::TokenType::IDENTIFIER) ||
          tokens_.check(tokens::TokenType::CLASS) ||
          tokens_.check(tokens::TokenType::PUBLIC) ||
          tokens_.check(tokens::TokenType::PRIVATE) ||
          tokens_.check(tokens::TokenType::PROTECTED) ||
+         tokens_.check(tokens::TokenType::INTERFACE) ||
+         tokens_.check(tokens::TokenType::ENUM) ||
+         tokens_.check(tokens::TokenType::NAMESPACE) ||
+         tokens_.check(tokens::TokenType::TYPEDEF) ||
+         tokens_.check(tokens::TokenType::ZEROCAST) ||
          tokens::isFunctionModifier(tokens_.peek().getType());
 }
 

@@ -1,6 +1,69 @@
-// This sample TSPP file demonstrates various language features, except for interfaces and enums.
-
+// This sample TSPP file demonstrates various language features, including interfaces, enums, and typedefs.
 #static let globalCounter: int = 100;
+
+// Enum declaration with underlying type
+enum Status : int {
+    PENDING = 0,
+    ACTIVE = 1,
+    COMPLETED = 2,
+    FAILED = 3
+}
+
+// Type alias using typedef
+typedef IntArray = int[];
+typedef StatusCallback = function(Status): void;
+
+// Interface declaration with method signatures
+interface Processor {
+    process(data: int): Status;
+    getStatus(): Status;
+}
+
+// Interface with generic parameter and constraints
+interface Container<T extends Comparable> {
+    add(item: T): void;
+    get(index: int): T;
+    size(): int;
+}
+
+// Interface with extended interfaces
+#zerocast interface AdvancedProcessor extends Processor {
+    reset(): void;
+    configure(options: int): Status;
+}
+
+// Namespace containing multiple declarations
+namespace MathOps {
+    function subtract(a: int, b: int): int {
+        return a - b;
+    }
+    
+    function multiply(a: int, b: int): int {
+        return a * b;
+    }
+    
+    // Nested enum within namespace
+    enum Operation {
+        ADD,
+        SUBTRACT,
+        MULTIPLY,
+        DIVIDE
+    }
+    
+    // Function using the enum
+    function calculate(a: int, b: int, op: Operation): int {
+        if (op == Operation.ADD) {
+            return a + b;
+        } else if (op == Operation.SUBTRACT) {
+            return subtract(a, b);
+        } else if (op == Operation.MULTIPLY) {
+            return multiply(a, b);
+        } else if (op == Operation.DIVIDE) {
+            return a / b;
+        }
+        return 0;
+    }
+}
 
 function increment(x: int): int {
     return x + 1;
@@ -16,21 +79,67 @@ function identity<T>(value: T): T {
     return value;
 }
 
-// namespace MathOps {
-//     function subtract(a: int, b: int): int {
-//         return a - b;
-//     }
+// Class implementing interfaces
+class TaskProcessor implements Processor, AdvancedProcessor {
+    private let currentStatus: Status;
+    private let options: int;
     
-//     function multiply(a: int, b: int): int {
-//         return a * b;
-//     }
-// }
+    constructor(initialStatus: Status) {
+        this.currentStatus = initialStatus;
+        this.options = 0;
+    }
+    
+    // Implementing Processor interface
+    public function process(data: int): Status {
+        if (data > 0) {
+            this.currentStatus = Status.ACTIVE;
+            return Status.ACTIVE;
+        } else {
+            this.currentStatus = Status.FAILED;
+            return Status.FAILED;
+        }
+    }
+    
+    public function getStatus(): Status {
+        return this.currentStatus;
+    }
+    
+    // Implementing AdvancedProcessor interface
+    public function reset(): void {
+        this.currentStatus = Status.PENDING;
+    }
+    
+    public function configure(options: int): Status {
+        this.options = options;
+        return Status.COMPLETED;
+    }
+}
+
+// Generic class implementing Container interface
+class ArrayContainer<T extends Comparable> implements Container<T> {
+    private let items: T[];
+    
+    constructor() {
+        this.items = [];
+    }
+    
+    public function add(item: T): void {
+        // Add item to array
+    }
+    
+    public function get(index: int): T {
+        return this.items[index];
+    }
+    
+    public function size(): int {
+        return this.items.length;
+    }
+}
 
 class Calculator {
     #packed let memory: int;
-
     // Constructor declaration.
-    function Calculator(initial: int): void {
+    constructor(initial: int) {
         this.memory = initial;
     }
     
@@ -66,6 +175,14 @@ function printArray(arr: int[]): void {
     }
 }
 
+// Function using typedef
+function processStatusArray(statuses: IntArray, callback: StatusCallback): void {
+    for (let s of statuses) {
+        let status = cast<Status>(s);
+        callback(status);
+    }
+}
+
 function main(): void {
     let result1: int = increment(5);
     let result2: int = pointerExample();
@@ -80,7 +197,7 @@ function main(): void {
     print("Calculator compute result: " + computeResult);
     
     // Array literal usage.
-    let numbers: int[] = [1, 2, 3, 4, 5];
+    let numbers: IntArray = [1, 2, 3, 4, 5];
     printArray(numbers);
     
     // Using functions defined within a namespace.
@@ -88,6 +205,29 @@ function main(): void {
     let prod: int = MathOps.multiply(4, 5);
     print("Subtraction result: " + diff);
     print("Multiplication result: " + prod);
+    
+    // Using namespace enum
+    let result: int = MathOps.calculate(5, 3, MathOps.Operation.MULTIPLY);
+    print("Calculation result: " + result);
+    
+    // Using interface and enum
+    let processor: TaskProcessor = new TaskProcessor(Status.PENDING);
+    let processStatus: Status = processor.process(42);
+    print("Process status: " + processStatus);
+    
+    // Reset the processor
+    processor.reset();
+    print("After reset, status: " + processor.getStatus());
+    
+    // Configure the processor
+    let configStatus: Status = processor.configure(100);
+    print("Configuration status: " + configStatus);
+    
+    // Using typedef with callback
+    let statusArray: IntArray = [0, 1, 2, 3];
+    processStatusArray(statusArray, function(status: Status): void {
+        print("Processing status: " + status);
+    });
 }
 
 main();

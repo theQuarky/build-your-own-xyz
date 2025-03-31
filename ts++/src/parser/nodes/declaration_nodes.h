@@ -343,6 +343,206 @@ private:
   BlockPtr body_;
 };
 
+/**
+ * Namespace declaration node
+ */
+class NamespaceDeclNode : public DeclarationNode {
+public:
+  NamespaceDeclNode(const std::string &name, std::vector<DeclPtr> declarations,
+                    const core::SourceLocation &loc)
+      : DeclarationNode(name, loc), declarations_(std::move(declarations)) {}
+
+  const std::vector<DeclPtr> &getDeclarations() const { return declarations_; }
+
+  bool accept(interface::BaseInterface *visitor) override {
+    return visitor->visitParse();
+  }
+
+private:
+  std::vector<DeclPtr> declarations_; // Declarations inside the namespace
+};
+
+/**
+ * Enum member node
+ */
+class EnumMemberNode : public DeclarationNode {
+public:
+  EnumMemberNode(const std::string &name,
+                 ExpressionPtr value, // Optional explicit value
+                 const core::SourceLocation &loc)
+      : DeclarationNode(name, loc), value_(std::move(value)) {}
+
+  ExpressionPtr getValue() const { return value_; }
+
+  bool accept(interface::BaseInterface *visitor) override {
+    return visitor->visitParse();
+  }
+
+private:
+  ExpressionPtr value_; // Optional explicit value for the enum member
+};
+
+using EnumMemberPtr = std::shared_ptr<EnumMemberNode>;
+
+/**
+ * Enum declaration node
+ */
+class EnumDeclNode : public DeclarationNode {
+public:
+  EnumDeclNode(
+      const std::string &name,
+      TypePtr underlyingType, // Optional underlying type (e.g., int, string)
+      std::vector<EnumMemberPtr> members, const core::SourceLocation &loc)
+      : DeclarationNode(name, loc), underlyingType_(std::move(underlyingType)),
+        members_(std::move(members)) {}
+
+  TypePtr getUnderlyingType() const { return underlyingType_; }
+  const std::vector<EnumMemberPtr> &getMembers() const { return members_; }
+
+  bool accept(interface::BaseInterface *visitor) override {
+    return visitor->visitParse();
+  }
+
+private:
+  TypePtr underlyingType_;             // Optional underlying type
+  std::vector<EnumMemberPtr> members_; // Enum members
+};
+
+/**
+ * Method signature node (used in interfaces)
+ */
+class MethodSignatureNode : public DeclarationNode {
+public:
+  MethodSignatureNode(const std::string &name, tokens::TokenType accessModifier,
+                      std::vector<ParamPtr> parameters, TypePtr returnType,
+                      std::vector<TypePtr> throwsTypes,
+                      const core::SourceLocation &loc)
+      : DeclarationNode(name, loc), accessModifier_(accessModifier),
+        parameters_(std::move(parameters)), returnType_(std::move(returnType)),
+        throwsTypes_(std::move(throwsTypes)) {}
+
+  tokens::TokenType getAccessModifier() const { return accessModifier_; }
+  const std::vector<ParamPtr> &getParameters() const { return parameters_; }
+  TypePtr getReturnType() const { return returnType_; }
+  const std::vector<TypePtr> &getThrowsTypes() const { return throwsTypes_; }
+
+  bool accept(interface::BaseInterface *visitor) override {
+    return visitor->visitParse();
+  }
+
+private:
+  tokens::TokenType accessModifier_; // public, private, protected
+  std::vector<ParamPtr> parameters_; // Method parameters
+  TypePtr returnType_;               // Return type
+  std::vector<TypePtr> throwsTypes_; // Exception types
+};
+
+/**
+ * Property signature node (used in interfaces)
+ */
+class PropertySignatureNode : public DeclarationNode {
+public:
+  PropertySignatureNode(const std::string &name,
+                        tokens::TokenType accessModifier, TypePtr type,
+                        bool hasGetter, bool hasSetter,
+                        const core::SourceLocation &loc)
+      : DeclarationNode(name, loc), accessModifier_(accessModifier),
+        type_(std::move(type)), hasGetter_(hasGetter), hasSetter_(hasSetter) {}
+
+  tokens::TokenType getAccessModifier() const { return accessModifier_; }
+  TypePtr getType() const { return type_; }
+  bool hasGetter() const { return hasGetter_; }
+  bool hasSetter() const { return hasSetter_; }
+
+  bool accept(interface::BaseInterface *visitor) override {
+    return visitor->visitParse();
+  }
+
+private:
+  tokens::TokenType accessModifier_; // public, private, protected
+  TypePtr type_;                     // Property type
+  bool hasGetter_;                   // Whether property has a getter
+  bool hasSetter_;                   // Whether property has a setter
+};
+
+/**
+ * Interface declaration node
+ */
+class InterfaceDeclNode : public DeclarationNode {
+public:
+  InterfaceDeclNode(const std::string &name,
+                    std::vector<TypePtr> extendedInterfaces,
+                    std::vector<DeclPtr> members,
+                    bool isZeroCast, // #zerocast attribute
+                    const core::SourceLocation &loc)
+      : DeclarationNode(name, loc),
+        extendedInterfaces_(std::move(extendedInterfaces)),
+        members_(std::move(members)), isZeroCast_(isZeroCast) {}
+
+  const std::vector<TypePtr> &getExtendedInterfaces() const {
+    return extendedInterfaces_;
+  }
+
+  const std::vector<DeclPtr> &getMembers() const { return members_; }
+
+  bool isZeroCast() const { return isZeroCast_; }
+
+  bool accept(interface::BaseInterface *visitor) override {
+    return visitor->visitParse();
+  }
+
+private:
+  std::vector<TypePtr> extendedInterfaces_; // Interfaces that this one extends
+  std::vector<DeclPtr>
+      members_;     // Interface members (method signatures, properties)
+  bool isZeroCast_; // Whether this interface has #zerocast attribute
+};
+
+/**
+ * Generic interface declaration node
+ */
+class GenericInterfaceDeclNode : public InterfaceDeclNode {
+public:
+  GenericInterfaceDeclNode(const std::string &name,
+                           std::vector<TypePtr> extendedInterfaces,
+                           std::vector<DeclPtr> members, bool isZeroCast,
+                           std::vector<TypePtr> genericParams,
+                           const core::SourceLocation &loc)
+      : InterfaceDeclNode(name, std::move(extendedInterfaces),
+                          std::move(members), isZeroCast, loc),
+        genericParams_(std::move(genericParams)) {}
+
+  const std::vector<TypePtr> &getGenericParams() const {
+    return genericParams_;
+  }
+
+  bool accept(interface::BaseInterface *visitor) override {
+    return visitor->visitParse();
+  }
+
+private:
+  std::vector<TypePtr> genericParams_; // Generic type parameters
+};
+
+/**
+ * Type alias (typedef) declaration node
+ */
+class TypedefDeclNode : public DeclarationNode {
+public:
+  TypedefDeclNode(const std::string &name, TypePtr aliasedType,
+                  const core::SourceLocation &loc)
+      : DeclarationNode(name, loc), aliasedType_(std::move(aliasedType)) {}
+
+  TypePtr getAliasedType() const { return aliasedType_; }
+
+  bool accept(interface::BaseInterface *visitor) override {
+    return visitor->visitParse();
+  }
+
+private:
+  TypePtr aliasedType_; // Type being aliased
+};
+
 // Forward declarations for declaration visitors
 class DeclVisitor {
 public:
@@ -351,6 +551,16 @@ public:
   virtual bool visitParameter(ParameterNode *node) = 0;
   virtual bool visitFunction(FunctionDeclNode *node) = 0;
   virtual bool visitAttribute(AttributeNode *node) = 0;
+
+  // New visitor methods for namespaces, interfaces, and enums
+  virtual bool visitNamespace(NamespaceDeclNode *node) = 0;
+  virtual bool visitInterface(InterfaceDeclNode *node) = 0;
+  virtual bool visitGenericInterface(GenericInterfaceDeclNode *node) = 0;
+  virtual bool visitMethodSignature(MethodSignatureNode *node) = 0;
+  virtual bool visitPropertySignature(PropertySignatureNode *node) = 0;
+  virtual bool visitEnum(EnumDeclNode *node) = 0;
+  virtual bool visitEnumMember(EnumMemberNode *node) = 0;
+  virtual bool visitTypedef(TypedefDeclNode *node) = 0;
 };
 
 } // namespace nodes

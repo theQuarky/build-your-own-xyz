@@ -1,19 +1,17 @@
 #include "expression_parse_visitor.h"
+#include "parser/nodes/declaration_nodes.h"
 
 namespace visitors {
 
 ExpressionParseVisitor::ExpressionParseVisitor(
-    tokens::TokenStream &tokens, core::ErrorReporter &errorReporter)
-    : tokens_(tokens), errorReporter_(errorReporter),
-      binaryVisitor_(tokens, errorReporter, *this),
+    tokens::TokenStream &tokens, core::ErrorReporter &errorReporter,
+    IDeclarationVisitor *declVisitor, IStatementVisitor *stmtVisitor)
+    : tokens_(tokens), errorReporter_(errorReporter), declVisitor_(declVisitor),
+      stmtVisitor_(stmtVisitor), binaryVisitor_(tokens, errorReporter, *this),
       unaryVisitor_(tokens, errorReporter, *this),
       primaryVisitor_(tokens, errorReporter, *this),
       callVisitor_(tokens, errorReporter, *this),
-      castVisitor_(tokens, errorReporter, *this) {
-  // Validate constructor parameters
-  // assert(&tokens != nullptr && "Token stream cannot be null");
-  // assert(&errorReporter != nullptr && "Error reporter cannot be null");
-}
+      castVisitor_(tokens, errorReporter, *this) {}
 
 nodes::ExpressionPtr ExpressionParseVisitor::parseExpression() {
   try {
@@ -166,6 +164,109 @@ nodes::ExpressionPtr ExpressionParseVisitor::parseNewExpression() {
 
   return std::make_shared<nodes::NewExpressionNode>(location, className,
                                                     std::move(arguments));
+}
+
+// Add to ExpressionParseVisitor class
+nodes::ExpressionPtr ExpressionParseVisitor::parseFunctionExpression() {
+  auto location = tokens_.peek().getLocation();
+
+  // Consume 'function' keyword
+  if (!consume(tokens::TokenType::FUNCTION,
+               "Expected 'function' keyword in function expression")) {
+    return nullptr;
+  }
+
+  // Parse parameter list
+  if (!consume(tokens::TokenType::LEFT_PAREN,
+               "Expected '(' after 'function'")) {
+    return nullptr;
+  }
+
+  std::vector<nodes::ParamPtr> parameters;
+  if (!check(tokens::TokenType::RIGHT_PAREN)) {
+    do {
+      auto param =
+          parseParameter(); // You'll need to implement or reuse this method
+      if (!param) {
+        return nullptr;
+      }
+      parameters.push_back(std::move(param));
+    } while (match(tokens::TokenType::COMMA));
+  }
+
+  if (!consume(tokens::TokenType::RIGHT_PAREN,
+               "Expected ')' after parameters")) {
+    return nullptr;
+  }
+
+  // Parse optional return type
+  nodes::TypePtr returnType;
+  if (match(tokens::TokenType::COLON)) {
+    returnType = declVisitor_->parseType();
+    if (!returnType) {
+      return nullptr;
+    }
+  }
+
+  // Parse function body
+  if (!consume(tokens::TokenType::LEFT_BRACE,
+               "Expected '{' before function body")) {
+    return nullptr;
+  }
+
+  auto body = stmtVisitor_->parseBlock();
+  if (!body) {
+    return nullptr;
+  }
+
+  // Create a function expression node
+  return std::make_shared<nodes::FunctionExpressionNode>(
+      std::move(parameters), std::move(returnType), std::move(body), location);
+}
+// Add to ExpressionParseVisitor class in expression_parse_visitor.cpp
+nodes::ParamPtr ExpressionParseVisitor::parseParameter() {
+  auto location = tokens_.peek().getLocation();
+
+  // Parse parameter modifiers (ref/const)
+  bool isRef = false;
+  bool isConst = false;
+
+  if (match(tokens::TokenType::REF)) {
+    isRef = true;
+  } else if (match(tokens::TokenType::CONST)) {
+    isConst = true;
+  }
+
+  // Parse parameter name
+  if (!match(tokens::TokenType::IDENTIFIER)) {
+    error("Expected parameter name");
+    return nullptr;
+  }
+  auto name = tokens_.previous().getLexeme();
+
+  // Parse parameter type
+  if (!consume(tokens::TokenType::COLON, "Expected ':' after parameter name")) {
+    return nullptr;
+  }
+
+  auto type = declVisitor_->parseType();
+  if (!type) {
+    return nullptr;
+  }
+
+  // Parse optional default value
+  nodes::ExpressionPtr defaultValue = nullptr;
+  if (match(tokens::TokenType::EQUALS)) {
+    defaultValue = parseExpression();
+    if (!defaultValue) {
+      error("Invalid default value expression");
+      return nullptr;
+    }
+  }
+
+  // Create parameter node with ref/const flags
+  return std::make_shared<nodes::ParameterNode>(
+      name, std::move(type), std::move(defaultValue), isRef, isConst, location);
 }
 
 bool ExpressionParseVisitor::match(tokens::TokenType type) {
