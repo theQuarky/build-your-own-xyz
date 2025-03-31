@@ -4,6 +4,7 @@
 #include "parser/nodes/declaration_nodes.h"
 #include "parser/visitors/parse_visitor/expression/iexpression_visitor.h"
 #include "tokens/stream/token_stream.h"
+#include <iostream>
 #include <vector>
 
 namespace visitors {
@@ -50,30 +51,37 @@ public:
       return nullptr;
     }
 
-    // Parse enum members
-    std::vector<nodes::EnumMemberPtr> members;
-    while (!check(tokens::TokenType::RIGHT_BRACE) && !tokens_.isAtEnd()) {
-      auto member = parseEnumMember();
-      if (member) {
-        members.push_back(std::move(member));
-      } else {
-        // Skip to the next member if there was an error
-        synchronize();
-      }
-
-      // Expect comma between members or closing brace
-      if (!check(tokens::TokenType::RIGHT_BRACE)) {
-        if (!consume(tokens::TokenType::COMMA,
-                     "Expected ',' between enum members")) {
-          return nullptr;
-        }
-
-        // Allow trailing comma
-        if (check(tokens::TokenType::RIGHT_BRACE)) {
-          break;
-        }
-      }
-    }
+// Parse enum members
+std::vector<nodes::EnumMemberPtr> members;
+while (!check(tokens::TokenType::RIGHT_BRACE) && !tokens_.isAtEnd()) {
+  // Skip any semicolons
+  while (check(tokens::TokenType::SEMICOLON)) {
+    tokens_.advance();
+  }
+  
+  // If we've reached the closing brace, we're done
+  if (check(tokens::TokenType::RIGHT_BRACE)) {
+    break;
+  }
+  
+  // Parse the enum member
+  auto member = parseEnumMember();
+  if (!member) {
+    // Error already reported in parseEnumMember
+    return nullptr;
+  }
+  members.push_back(std::move(member));
+  
+  // Check for comma or semicolon or right brace
+  if (check(tokens::TokenType::COMMA)) {
+    tokens_.advance(); // Consume comma
+  } else if (!check(tokens::TokenType::SEMICOLON) && 
+             !check(tokens::TokenType::RIGHT_BRACE)) {
+    // If no comma, semicolon, or right brace, that's an error
+    error("Expected ',' or ';' after enum member");
+    return nullptr;
+  }
+}
 
     // Expect closing brace
     if (!consume(tokens::TokenType::RIGHT_BRACE,

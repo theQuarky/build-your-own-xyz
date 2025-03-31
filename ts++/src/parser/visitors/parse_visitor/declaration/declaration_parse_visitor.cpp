@@ -43,7 +43,14 @@ nodes::DeclPtr DeclarationParseVisitor::parseDeclaration() {
 
     // Check for enum declaration
     if (check(tokens::TokenType::ENUM)) {
-      return enumVisitor_->parseEnumDecl();
+      auto enumDecl = enumVisitor_->parseEnumDecl();
+      if (!enumDecl) {
+        return nullptr;
+      }
+      if (check(tokens::TokenType::SEMICOLON)) {
+        tokens_.advance(); // Consume the semicolon
+      }
+      return enumDecl;
     }
 
     // Check for typedef declaration

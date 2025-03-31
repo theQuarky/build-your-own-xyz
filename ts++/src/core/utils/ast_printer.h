@@ -279,6 +279,44 @@ private:
     });
   }
 
+  void visitEnumDecl(const nodes::EnumDeclNode *node) {
+    printLine("EnumDecl " + getLocationString(node->getLocation()), BLUE);
+    withIndent([&]() {
+      printLine("Name: '" + node->getName() + "'");
+
+      // Print underlying type if present
+      if (node->getUnderlyingType()) {
+        printLine("Underlying Type:");
+        withIndent([&]() { visitType(node->getUnderlyingType().get()); });
+      }
+
+      // Print enum members
+      const auto &members = node->getMembers();
+      if (!members.empty()) {
+        printLine("Members:");
+        withIndent([&]() {
+          for (const auto &member : members) {
+            visitEnumMember(member.get());
+          }
+        });
+      }
+    });
+  }
+
+  void visitEnumMember(const nodes::EnumMemberNode *node) {
+    printLine("EnumMember '" + node->getName() + "' " +
+                  getLocationString(node->getLocation()),
+              YELLOW);
+
+    // Print value if present
+    if (node->getValue()) {
+      withIndent([&]() {
+        printLine("Value:");
+        withIndent([&]() { visitExpr(node->getValue().get()); });
+      });
+    }
+  }
+
   void visitParameter(const nodes::ParameterNode *node) {
     printLine("Parameter '" + node->getName() + "' " +
                   getLocationString(node->getLocation()),
@@ -930,6 +968,9 @@ public:
       else if (auto propertyDecl =
                    std::dynamic_pointer_cast<nodes::PropertyDeclNode>(node))
         visitPropertyDecl(propertyDecl.get());
+      else if (auto enumDecl =
+                   std::dynamic_pointer_cast<nodes::EnumDeclNode>(node))
+        visitEnumDecl(enumDecl.get());
       else {
         indent();
         std::cout << RED << "Unknown node type at gfgfgf"
