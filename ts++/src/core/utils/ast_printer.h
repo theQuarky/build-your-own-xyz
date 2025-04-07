@@ -384,6 +384,29 @@ private:
     });
   }
 
+  void visitTypedefDecl(const nodes::TypedefDeclNode *node) {
+    printLine("TypedefDecl " + getLocationString(node->getLocation()), BLUE);
+    withIndent([&]() {
+      printLine("Name: '" + node->getName() + "'");
+
+      if (node->getAliasedType()) {
+        printLine("Aliased Type:");
+        withIndent([&]() { visitType(node->getAliasedType().get()); });
+      }
+
+      // Print attributes if present
+      const auto &attributes = node->getAttributes();
+      if (!attributes.empty()) {
+        printLine("Attributes:");
+        withIndent([&]() {
+          for (const auto &attr : attributes) {
+            visitAttribute(attr.get());
+          }
+        });
+      }
+    });
+  }
+
   //---------------------------------------------------------------------------
   // Visitor Functions for Statement and Expression Nodes
   //---------------------------------------------------------------------------
@@ -1070,6 +1093,9 @@ public:
       else if (auto interfaceDecl =
                    std::dynamic_pointer_cast<nodes::InterfaceDeclNode>(node))
         visitInterfaceDecl(interfaceDecl.get());
+      else if (auto typedefDecl =
+                   std::dynamic_pointer_cast<nodes::TypedefDeclNode>(node))
+        visitTypedefDecl(typedefDecl.get());
       else {
         indent();
         std::cout << RED << "Unknown node type at gfgfgf"
@@ -1157,6 +1183,9 @@ public:
     else if (auto propSig =
                  std::dynamic_pointer_cast<nodes::PropertySignatureNode>(node))
       visitPropertySignature(propSig.get());
+    else if (auto typedefDecl =
+                 std::dynamic_pointer_cast<nodes::TypedefDeclNode>(node))
+      visitTypedefDecl(typedefDecl.get());
     else {
       indent();
       std::cout << RED << "Unknown node type at "

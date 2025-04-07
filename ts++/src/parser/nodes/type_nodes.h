@@ -221,23 +221,35 @@ private:
  */
 class FunctionTypeNode : public TypeNode {
 public:
-  FunctionTypeNode(TypePtr returnType, std::vector<TypePtr> paramTypes,
-                   const core::SourceLocation &loc)
-      : TypeNode(loc), returnType_(std::move(returnType)),
-        parameterTypes_(std::move(paramTypes)) {}
+  FunctionTypeNode(const std::vector<TypePtr> &paramTypes, TypePtr returnType,
+                   const core::SourceLocation &location)
+      : TypeNode(location), paramTypes_(paramTypes), returnType_(returnType) {}
 
+  // Override visitor accept method
   TypePtr getReturnType() const { return returnType_; }
-  const std::vector<TypePtr> &getParameterTypes() const {
-    return parameterTypes_;
-  }
+  const std::vector<TypePtr> &getParameterTypes() const { return paramTypes_; }
   bool isFunction() const override { return true; }
   bool accept(interface::BaseInterface *visitor) override {
     return visitor->visitParse();
   };
+  std::string toString() const override {
+    std::ostringstream oss;
+    oss << "function (";
+
+    for (size_t i = 0; i < paramTypes_.size(); ++i) {
+      oss << paramTypes_[i]->toString();
+      if (i < paramTypes_.size() - 1) {
+        oss << ", ";
+      }
+    }
+
+    oss << "): " << returnType_->toString();
+    return oss.str();
+  }
 
 private:
+  std::vector<TypePtr> paramTypes_;
   TypePtr returnType_;
-  std::vector<TypePtr> parameterTypes_;
 };
 
 /**

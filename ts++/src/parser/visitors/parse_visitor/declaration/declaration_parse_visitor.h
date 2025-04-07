@@ -40,6 +40,7 @@ public:
                                 const core::SourceLocation &location);
   nodes::TypePtr parsePointerType(nodes::TypePtr baseType,
                                   const core::SourceLocation &location);
+  nodes::TypePtr parseFunctionType(const core::SourceLocation &location);
 
   // Other helper methods
   tokens::TokenType parseStorageClass();

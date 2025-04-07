@@ -239,7 +239,12 @@ bool DeclarationParseVisitor::parseClassModifiers(
 nodes::TypePtr DeclarationParseVisitor::parseType() {
   auto location = tokens_.peek().getLocation();
 
-  // Handle smart pointer types first since they start with #
+  // Handle function types first if we see the 'function' keyword
+  if (match(tokens::TokenType::FUNCTION)) {
+    return parseFunctionType(location);
+  }
+
+  // Handle smart pointer types since they start with #
   if (check(tokens::TokenType::SHARED) || check(tokens::TokenType::UNIQUE) ||
       check(tokens::TokenType::WEAK)) {
     return parseSmartPointerType(location);
@@ -255,6 +260,7 @@ nodes::TypePtr DeclarationParseVisitor::parseType() {
     // Otherwise, parse a primary type.
     type = parsePrimaryType();
   }
+
   if (!type)
     return nullptr;
 
@@ -286,6 +292,56 @@ nodes::TypePtr DeclarationParseVisitor::parseType() {
   }
 
   return type;
+}
+
+// Fix for the parseFunctionType method - using correct parameter order
+nodes::TypePtr DeclarationParseVisitor::parseFunctionType(
+    const core::SourceLocation &location) {
+  // Expect opening parenthesis for parameter list
+  if (!consume(tokens::TokenType::LEFT_PAREN,
+               "Expected '(' after 'function' keyword.")) {
+    return nullptr;
+  }
+
+  // Parse parameter types
+  std::vector<nodes::TypePtr> paramTypes;
+
+  // If next token is not RIGHT_PAREN, parse parameter types
+  if (!check(tokens::TokenType::RIGHT_PAREN)) {
+    do {
+      // Parse a parameter type
+      auto paramType = parseType();
+      if (!paramType) {
+        return nullptr;
+      }
+      paramTypes.push_back(paramType);
+
+      // Continue if we see a comma
+    } while (match(tokens::TokenType::COMMA));
+  }
+
+  // Expect closing parenthesis
+  if (!consume(tokens::TokenType::RIGHT_PAREN,
+               "Expected ')' after function parameters.")) {
+    return nullptr;
+  }
+
+  // Expect colon followed by return type
+  if (!consume(tokens::TokenType::COLON,
+               "Expected ':' after function parameters.")) {
+    return nullptr;
+  }
+
+  // Parse return type
+  auto returnType = parseType();
+  if (!returnType) {
+    return nullptr;
+  }
+
+  // Construct and return the function type node
+  // Use the correct parameter order to match the FunctionTypeNode constructor
+  return std::make_shared<nodes::FunctionTypeNode>(paramTypes, returnType,
+                                                   location);
 }
 
 nodes::TypePtr DeclarationParseVisitor::parseSmartPointerType(
