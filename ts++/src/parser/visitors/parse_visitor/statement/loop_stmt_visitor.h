@@ -74,6 +74,7 @@ public:
   }
 
   // Parse for statement: for (init; condition; increment) statement
+  // Parse for statement: for (init; condition; increment) statement
   nodes::StmtPtr parseForStatement() {
     auto location = tokens_.previous().getLocation();
 
@@ -81,49 +82,51 @@ public:
       return nullptr;
     }
 
-    // Handle for-of loop
-    if (match(tokens::TokenType::LET) || match(tokens::TokenType::CONST)) {
-      bool isConst = tokens_.previous().getType() == tokens::TokenType::CONST;
-
-      if (!match(tokens::TokenType::IDENTIFIER)) {
-        error("Expected variable name in for loop");
-        return nullptr;
-      }
-      auto identifier = tokens_.previous().getLexeme();
-
-      // Optional type annotation
-      nodes::TypePtr type;
-      if (match(tokens::TokenType::COLON)) {
-        type = exprVisitor_.parseType();
-        if (!type)
-          return nullptr;
-      }
-
-      // Check for 'of' keyword
-      if (match(tokens::TokenType::OF)) {
-        auto iterable = exprVisitor_.parseExpression();
-        if (!iterable)
-          return nullptr;
-
-        if (!consume(tokens::TokenType::RIGHT_PAREN,
-                     "Expected ')' after for-of clause")) {
-          return nullptr;
-        }
-
-        auto body = stmtVisitor_.parseStatement();
-        if (!body)
-          return nullptr;
-
-        return std::make_shared<nodes::ForOfStmtNode>(isConst, identifier,
-                                                      iterable, body, location);
-      }
-
-      // Regular for loop with variable declaration
-      return parseForWithDecl(location, isConst, identifier, type);
+    // Handle for-of loop with 'let' or 'const'
+    bool isConst = false;
+    if (match(tokens::TokenType::CONST)) {
+      isConst = true;
+    } else if (match(tokens::TokenType::LET)) {
+      isConst = false;
+    } else {
+      return parseTraditionalFor(location);
     }
 
-    // Traditional for loop
-    return parseTraditionalFor(location);
+    if (!match(tokens::TokenType::IDENTIFIER)) {
+      error("Expected variable name in for loop");
+      return nullptr;
+    }
+    auto identifier = tokens_.previous().getLexeme();
+
+    // Optional type annotation
+    nodes::TypePtr type;
+    if (match(tokens::TokenType::COLON)) {
+      type = exprVisitor_.parseType();
+      if (!type)
+        return nullptr;
+    }
+
+    // Check for 'of' keyword
+    if (match(tokens::TokenType::OF)) {
+      auto iterable = exprVisitor_.parseExpression();
+      if (!iterable)
+        return nullptr;
+
+      if (!consume(tokens::TokenType::RIGHT_PAREN,
+                   "Expected ')' after for-of clause")) {
+        return nullptr;
+      }
+
+      auto body = stmtVisitor_.parseStatement();
+      if (!body)
+        return nullptr;
+
+      return std::make_shared<nodes::ForOfStmtNode>(isConst, identifier,
+                                                    iterable, body, location);
+    }
+
+    // Regular for loop with variable declaration
+    return parseForWithDecl(location, isConst, identifier, type);
   }
 
 private:

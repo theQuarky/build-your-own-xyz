@@ -54,8 +54,22 @@ public:
           return nullptr;
         }
         auto paramName = tokens_.previous().getLexeme();
-        genericParams.push_back(std::make_shared<nodes::NamedTypeNode>(
-            paramName, tokens_.previous().getLocation()));
+        auto paramLocation = tokens_.previous().getLocation();
+
+        // Check for constraints (extends TypeConstraint)
+        std::vector<nodes::TypePtr> constraints;
+        if (match(tokens::TokenType::EXTENDS)) {
+          // Parse the constraint type
+          auto constraint = parseTypeConstraint();
+          if (!constraint)
+            return nullptr;
+          constraints.push_back(constraint);
+        }
+
+        // Create a GenericParamNode instead of NamedTypeNode
+        genericParams.push_back(std::make_shared<nodes::GenericParamNode>(
+            paramName, std::move(constraints), paramLocation));
+
       } while (match(tokens::TokenType::COMMA));
 
       if (!consume(tokens::TokenType::GREATER,
@@ -151,6 +165,30 @@ public:
           false, // isAsync
           location);
     }
+  }
+
+  // Helper method to parse type constraints
+  nodes::TypePtr parseTypeConstraint() {
+    auto location = tokens_.peek().getLocation();
+
+    // Check for built-in constraints
+    if (match(tokens::TokenType::IDENTIFIER)) {
+      std::string constraintName = tokens_.previous().getLexeme();
+
+      // Handle built-in constraints like "number", "comparable", etc.
+      if (nodes::isValidBuiltinConstraint(constraintName)) {
+        return std::make_shared<nodes::BuiltinConstraintNode>(
+            constraintName, tokens_.previous().getLocation());
+      }
+
+      // Not a built-in constraint, so it must be a user-defined type
+      // Create a named type node
+      return std::make_shared<nodes::NamedTypeNode>(
+          constraintName, tokens_.previous().getLocation());
+    }
+
+    // If it's not a simple identifier, try to parse it as a more complex type
+    return declVisitor_.parseType();
   }
 
 private:

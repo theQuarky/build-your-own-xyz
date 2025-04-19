@@ -105,15 +105,16 @@ nodes::DeclPtr DeclarationParseVisitor::parseDeclaration() {
     // Parse storage modifiers (#heap, #stack, #static)
     tokens::TokenType storageClass = tokens::TokenType::ERROR_TOKEN;
     if (check(tokens::TokenType::STACK) || check(tokens::TokenType::HEAP) ||
-        check(tokens::TokenType::STATIC)) {
+        check(tokens::TokenType::STATIC) || check(tokens::TokenType::WEAK)) {
       storageClass = tokens_.peek().getType();
       tokens_.advance();
     }
 
     // Parse class modifiers
     std::vector<tokens::TokenType> classModifiers;
-    if (check(tokens::TokenType::ALIGNED) || check(tokens::TokenType::PACKED) ||
-        check(tokens::TokenType::ABSTRACT)) {
+    while (check(tokens::TokenType::ALIGNED) ||
+           check(tokens::TokenType::PACKED) ||
+           check(tokens::TokenType::ABSTRACT)) {
       tokens::TokenType modifierType = tokens_.peek().getType();
       tokens_.advance(); // Consume the modifier
       classModifiers.push_back(modifierType);
@@ -188,7 +189,8 @@ nodes::DeclPtr DeclarationParseVisitor::parseDeclaration() {
       return std::make_shared<nodes::VarDeclNode>(
           name, type, initializer, storageClass, isConst, location);
     }
-
+    std::cout << "current token: " << tokens_.getCurrentToken().getLexeme()
+              << std::endl;
     error("Expected declaration");
     return nullptr;
   } catch (const std::exception &e) {
@@ -376,20 +378,46 @@ nodes::TypePtr DeclarationParseVisitor::parseSmartPointerType(
 }
 
 nodes::TypePtr DeclarationParseVisitor::parsePrimaryType() {
-  auto location = tokens_.peek().getLocation();
+  auto startLocation =
+      tokens_.peek().getLocation(); // Location of the first identifier
 
+  // Handle Primitive Types (int, float, etc.)
   if (tokens::TokenType::TYPE_BEGIN <= tokens_.peek().getType() &&
       tokens_.peek().getType() <= tokens::TokenType::TYPE_END) {
     auto type = tokens_.peek().getType();
     tokens_.advance();
-    return std::make_shared<nodes::PrimitiveTypeNode>(type, location);
-  } else if (check(tokens::TokenType::IDENTIFIER)) {
-    auto name = tokens_.peek().getLexeme();
-    tokens_.advance();
-    return std::make_shared<nodes::NamedTypeNode>(name, location);
+    return std::make_shared<nodes::PrimitiveTypeNode>(type, startLocation);
+  }
+  // Handle Named and Qualified Types
+  else if (check(tokens::TokenType::IDENTIFIER)) {
+    std::vector<std::string> identifiers;
+    identifiers.push_back(tokens_.peek().getLexeme());
+    tokens_.advance(); // Consume the first identifier
+
+    // Loop while we see a DOT followed by an IDENTIFIER
+    while (check(tokens::TokenType::DOT) &&
+           tokens_.peekNext().getType() == tokens::TokenType::IDENTIFIER) {
+      tokens_.advance(); // Consume the DOT
+      identifiers.push_back(
+          tokens_.peek().getLexeme()); // Store the next identifier
+      tokens_.advance();               // Consume the identifier
+    }
+
+    // Now decide which node to create based on how many identifiers we
+    // collected
+    if (identifiers.size() > 1) {
+      // It's a qualified name (e.g., Namespace.Type)
+      // Use the startLocation for the node
+      return std::make_shared<nodes::QualifiedTypeNode>(std::move(identifiers),
+                                                        startLocation);
+    } else {
+      // It's just a simple named type
+      return std::make_shared<nodes::NamedTypeNode>(identifiers[0],
+                                                    startLocation);
+    }
   }
 
-  error("Expected type name");
+  error("Expected type name or primitive type");
   return nullptr;
 }
 

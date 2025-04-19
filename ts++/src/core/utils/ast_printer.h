@@ -949,6 +949,26 @@ private:
         printLine("Has Setter: true");
     });
   }
+
+  void visitNamespaceDecl(const nodes::NamespaceDeclNode *node) {
+    printLine("NamespaceDecl " + getLocationString(node->getLocation()), BLUE);
+    withIndent([&]() {
+      // Print namespace name
+      printLine("Name: '" + node->getName() + "'");
+
+      // Print all declarations inside the namespace
+      const auto &declarations = node->getDeclarations();
+      if (!declarations.empty()) {
+        printLine("Declarations:");
+        withIndent([&]() {
+          for (const auto &decl : declarations) {
+            print(decl); // Recursively print each declaration
+          }
+        });
+      }
+    });
+  }
+
   //---------------------------------------------------------------------------
   // Utility Functions
   //---------------------------------------------------------------------------
@@ -1096,6 +1116,9 @@ public:
       else if (auto typedefDecl =
                    std::dynamic_pointer_cast<nodes::TypedefDeclNode>(node))
         visitTypedefDecl(typedefDecl.get());
+      else if (auto namespaceDecl =
+                   std::dynamic_pointer_cast<nodes::NamespaceDeclNode>(node))
+        visitNamespaceDecl(namespaceDecl.get());
       else {
         indent();
         std::cout << RED << "Unknown node type at gfgfgf"
@@ -1186,6 +1209,9 @@ public:
     else if (auto typedefDecl =
                  std::dynamic_pointer_cast<nodes::TypedefDeclNode>(node))
       visitTypedefDecl(typedefDecl.get());
+    else if (auto namespaceDecl =
+                 std::dynamic_pointer_cast<nodes::NamespaceDeclNode>(node))
+      visitNamespaceDecl(namespaceDecl.get());
     else {
       indent();
       std::cout << RED << "Unknown node type at "

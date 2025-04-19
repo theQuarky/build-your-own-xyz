@@ -1,6 +1,8 @@
 #include "expression_parse_visitor.h"
 #include "parser/nodes/declaration_nodes.h"
+#include "tokens/token_type.h"
 #include <iostream>
+#include <ostream>
 
 namespace visitors {
 
@@ -119,16 +121,30 @@ nodes::ExpressionPtr ExpressionParseVisitor::parseUnary() {
 }
 
 nodes::TypePtr ExpressionParseVisitor::parseType() {
-  if (!check(tokens::TokenType::IDENTIFIER)) {
+  auto location = tokens_.peek().getLocation();
+  std::string typeName;
+
+  // Handle primitive types
+  if (match(tokens::TokenType::VOID)) {
+    typeName = "void";
+  } else if (match(tokens::TokenType::INT)) {
+    typeName = "int";
+  } else if (match(tokens::TokenType::FLOAT)) {
+    typeName = "float";
+  } else if (match(tokens::TokenType::BOOLEAN)) {
+    typeName = "bool";
+  } else if (match(tokens::TokenType::STRING)) {
+    typeName = "string";
+  }
+  // Handle user-defined types (identifiers)
+  else if (match(tokens::TokenType::IDENTIFIER)) {
+    typeName = tokens_.previous().getLexeme();
+  } else {
     error("Expected type name");
     return nullptr;
   }
 
-  auto location = tokens_.peek().getLocation();
-  auto name = tokens_.peek().getLexeme();
-  tokens_.advance();
-
-  return std::make_shared<nodes::NamedTypeNode>(name, location);
+  return std::make_shared<nodes::NamedTypeNode>(typeName, location);
 }
 
 nodes::ExpressionPtr ExpressionParseVisitor::parseNewExpression() {

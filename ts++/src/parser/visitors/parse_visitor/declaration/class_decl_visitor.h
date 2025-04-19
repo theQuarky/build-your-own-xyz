@@ -160,6 +160,8 @@ public:
       } else if (tokenLexeme == "class") {
         // Handle nested class declarations
         return parseNestedClass(accessModifier);
+      } else if (check(tokens::TokenType::IDENTIFIER)) {
+        return parseMethod(accessModifier);
       } else {
         error("Expected class member declaration, found: " + tokenLexeme);
         return nullptr;
@@ -174,17 +176,17 @@ public:
   nodes::DeclPtr parseNestedClass(tokens::TokenType accessModifier) {
     // We've already verified this is a "class" token
     tokens_.advance(); // Consume "class"
-    
+
     // Use the same class parsing logic, but track that it's a nested class
     auto location = tokens_.previous().getLocation();
-    
+
     if (tokens_.peek().getType() != tokens::TokenType::IDENTIFIER) {
       error("Expected class name after 'class'");
       return nullptr;
     }
     auto className = tokens_.peek().getLexeme();
     tokens_.advance();
-    
+
     // Parse optional generic parameters
     std::vector<nodes::TypePtr> genericParams;
     if (tokens_.peek().getLexeme() == "<") {
@@ -193,7 +195,7 @@ public:
         return nullptr;
       }
     }
-    
+
     // Parse optional "extends" (base class)
     nodes::TypePtr baseClass;
     if (tokens_.peek().getLexeme() == "extends") {
@@ -204,7 +206,7 @@ public:
         return nullptr;
       }
     }
-    
+
     // Parse optional "implements" list
     std::vector<nodes::TypePtr> interfaces;
     if (tokens_.peek().getLexeme() == "implements") {
@@ -218,23 +220,23 @@ public:
         interfaces.push_back(ifaceType);
       } while (match(tokens::TokenType::COMMA));
     }
-    
+
     // Expect '{' to start class body
     if (tokens_.peek().getLexeme() != "{") {
       error("Expected '{' before nested class body");
       return nullptr;
     }
     tokens_.advance();
-    
+
     // Parse nested class members
     std::vector<nodes::DeclPtr> members;
-    
+
     while (!tokens_.isAtEnd()) {
       // Check for end of class
       if (tokens_.peek().getLexeme() == "}") {
         break;
       }
-      
+
       // Try to parse a member
       auto member = parseMemberDecl();
       if (member) {
@@ -242,29 +244,29 @@ public:
       } else {
         // Skip tokens until we find something that looks like a member start
         synchronize();
-        
+
         // If we're now at the end of the class, break out
         if (tokens_.peek().getLexeme() == "}" || tokens_.isAtEnd()) {
           break;
         }
       }
     }
-    
+
     // Consume the closing brace
     if (tokens_.peek().getLexeme() == "}") {
       tokens_.advance();
     } else {
       error("Expected '}' after nested class body");
     }
-    
+
     // Create the appropriate class node
     std::vector<tokens::TokenType> classModifiers;
-    
+
     if (!genericParams.empty()) {
       return std::make_shared<nodes::GenericClassDeclNode>(
           className, classModifiers, std::move(baseClass),
-          std::move(interfaces), std::move(members),
-          std::move(genericParams), location);
+          std::move(interfaces), std::move(members), std::move(genericParams),
+          location);
     } else {
       return std::make_shared<nodes::ClassDeclNode>(
           className, classModifiers, std::move(baseClass),
@@ -606,7 +608,7 @@ public:
         error("Expected generic parameter name");
         return false;
       }
-      
+
       // Get parameter name
       auto paramName = tokens_.peek().getLexeme();
       auto paramLoc = tokens_.peek().getLocation();
@@ -622,11 +624,11 @@ public:
           error("Expected constraint type after 'extends'");
           return false;
         }
-        
+
         auto constraintName = tokens_.peek().getLexeme();
         auto constraintLoc = tokens_.peek().getLocation();
         tokens_.advance();
-        
+
         // Create a constraint node - either built-in or named type
         auto constraintNode = std::make_shared<nodes::NamedTypeNode>(
             constraintName, constraintLoc);
@@ -635,16 +637,16 @@ public:
         // Parse any intersection types with &
         while (tokens_.peek().getLexeme() == "&") {
           tokens_.advance();
-          
+
           if (tokens_.peek().getType() != tokens::TokenType::IDENTIFIER) {
             error("Expected constraint type after '&'");
             return false;
           }
-          
+
           auto secondConstraintName = tokens_.peek().getLexeme();
           auto secondConstraintLoc = tokens_.peek().getLocation();
           tokens_.advance();
-          
+
           auto additionalConstraint = std::make_shared<nodes::NamedTypeNode>(
               secondConstraintName, secondConstraintLoc);
           constraints.push_back(additionalConstraint);
@@ -661,7 +663,7 @@ public:
         break;
       }
       tokens_.advance(); // Consume comma
-      
+
     } while (true);
 
     // Expect closing angle bracket
