@@ -250,3 +250,5 @@ The compiler can now:
 - Optimize memory layout without explicit size specifications
 
 Would you like me to show examples of how the compiler would optimize these basic types in different contexts?
+
+conditional, Bitwise expr, cast, compileTimeExpr, undefined and null decls

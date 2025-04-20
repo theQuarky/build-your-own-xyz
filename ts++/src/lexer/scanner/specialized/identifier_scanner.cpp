@@ -73,7 +73,8 @@ const std::unordered_map<std::string, tokens::TokenType> &getKeywordMapImpl() {
       {"#target", tokens::TokenType::TARGET},
       {"#packed", tokens::TokenType::PACKED},
       {"#abstract", tokens::TokenType::ABSTRACT},
-      {"#zerocast", tokens::TokenType::ZEROCAST}};
+      {"#zerocast", tokens::TokenType::ZEROCAST},
+      {"cast", tokens::TokenType::CAST}};
   return keywords;
 }
 } // namespace

@@ -24,6 +24,7 @@ enum class TokenType {
   NEW,              // 'new' keyword to create new class instance
   GET,
   SET,
+  CAST,
   DECL_END = NEW,
 
   /*****************************************************************************
