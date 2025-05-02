@@ -19,24 +19,24 @@ bool Parser::parse() {
     ast_.clear();
     errorReporter_.clear();
 
-    // Start the parsing process
-    if (!visitor_->parse()) {
+    // Start the parsing and type checking process
+    if (!visitor_->compile()) {  // Changed from parse() to compile()
       return false;
     }
 
     // Get the AST from the visitor
     ast_ = visitor_->getAST();
 
-    // Check for any errors that occurred during parsing
+    // Check for any errors that occurred during parsing or type checking
     return !hasErrors();
   } catch (const std::exception &e) {
     errorReporter_.error(tokens_.peek().getLocation(),
-                         std::string("Unexpected error during parsing: ") +
+                         std::string("Unexpected error during compilation: ") +
                              e.what());
     return false;
   } catch (...) {
     errorReporter_.error(tokens_.peek().getLocation(),
-                         "Unknown error occurred during parsing");
+                         "Unknown error occurred during compilation");
     return false;
   }
 }

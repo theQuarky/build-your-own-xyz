@@ -26,6 +26,9 @@ add_library(parser
     parser/visitors/parse_visitor/expression/expression_parse_visitor.cpp
     parser/visitors/parse_visitor/declaration/declaration_parse_visitor.cpp
     parser/visitors/parse_visitor/statement/statement_parse_visitor.cpp
+    parser/visitors/type_check_visitor/resolved_type.cpp
+    parser/visitors/type_check_visitor/type_check_visitor.cpp
+    parser/visitors/type_check_visitor/type_scope.cpp
 )
 
 add_library(repl
