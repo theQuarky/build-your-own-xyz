@@ -93,6 +93,10 @@ public:
   visitSmartPointerType(const nodes::SmartPointerTypeNode *node);
   std::shared_ptr<ResolvedType>
   visitTemplateType(const nodes::TemplateTypeNode *node);
+  std::shared_ptr<ResolvedType>
+  visitNewExpressionStmt(const nodes::NewExpressionNode *node);
+  std::shared_ptr<ResolvedType>
+  visitDeclarationStmt(const nodes::DeclarationStmtNode *node);
 
 private:
   // Report a type error
@@ -127,6 +131,7 @@ private:
   std::shared_ptr<ResolvedType> boolType_;
   std::shared_ptr<ResolvedType> stringType_;
   std::shared_ptr<ResolvedType> errorType_;
+  std::shared_ptr<ResolvedType> genericType_;
 };
 
 } // namespace visitors

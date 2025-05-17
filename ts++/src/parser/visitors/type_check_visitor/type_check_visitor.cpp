@@ -1,4 +1,5 @@
 #include "type_check_visitor.h"
+#include "parser/nodes/expression_nodes.h"
 #include "tokens/token_type.h"
 #include <iostream>
 
@@ -230,11 +231,44 @@ TypeCheckVisitor::visitStmt(const nodes::StatementNode *node) {
   } else if (auto switchStmt =
                  dynamic_cast<const nodes::SwitchStmtNode *>(node)) {
     return visitSwitchStmt(switchStmt);
+  }
+  // ADD THIS NEW CASE:
+  else if (auto declStmt =
+               dynamic_cast<const nodes::DeclarationStmtNode *>(node)) {
+    // Handle declaration statements by visiting the wrapped declaration
+    auto decl = declStmt->getDeclaration();
+
+    if (auto varDecl = std::dynamic_pointer_cast<nodes::VarDeclNode>(decl)) {
+      return visitVarDecl(varDecl.get());
+    } else if (auto funcDecl =
+                   std::dynamic_pointer_cast<nodes::FunctionDeclNode>(decl)) {
+      return visitFuncDecl(funcDecl.get());
+    } else if (auto classDecl =
+                   std::dynamic_pointer_cast<nodes::ClassDeclNode>(decl)) {
+      return visitClassDecl(classDecl.get());
+    } else if (auto enumDecl =
+                   std::dynamic_pointer_cast<nodes::EnumDeclNode>(decl)) {
+      return visitEnumDecl(enumDecl.get());
+    } else if (auto interfaceDecl =
+                   std::dynamic_pointer_cast<nodes::InterfaceDeclNode>(decl)) {
+      return visitInterfaceDecl(interfaceDecl.get());
+    } else {
+      // For any other declaration types
+      error(declStmt->getLocation(), "Unsupported declaration in statement");
+      return errorType_;
+    }
   } else {
     // Unhandled statement type
     error(node->getLocation(), "Unhandled statement type in type checking");
     return errorType_;
   }
+}
+
+// Add corresponding method:
+std::shared_ptr<ResolvedType>
+TypeCheckVisitor::visitNewExpressionStmt(const nodes::NewExpressionNode *node) {
+  // Implementation for the new statement type
+  return voidType_;
 }
 
 std::shared_ptr<ResolvedType>
