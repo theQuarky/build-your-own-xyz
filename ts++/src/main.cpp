@@ -1,3 +1,5 @@
+#include "codegen/llvm/llvm_code_gen.h"
+#include "codegen/codegen_options.h"
 #include "core/diagnostics/error_reporter.h"
 #include "core/utils/file_utils.h"
 #include "core/utils/log_utils.h"
@@ -44,20 +46,32 @@ int main(int argc, char *argv[]) {
     }
 
     // Print tokens if you want to see the lexer output
-    printTokenStream(tokens);
+    // printTokenStream(tokens);
 
     // Parsing
     parser::Parser parser(std::move(tokens), errorReporter);
     if (!parser.parse()) {
-      // std::cerr << "Fatal errors occurred during parsing.\n";
-      // errorReporter.printAllErrors();
       return 1;
     }
 
     // Get AST for next phase
     const auto &ast = parser.getAST();
     // TODO: Next phases (type checking, optimization, code generation)
-    printAST(ast);
+    if (!ast.getNodes().empty()) {
+      // Create code generator
+      codegen::CodeGenOptions options;
+      options.setOutputFilename(filePath + ".ll"); // Output LLVM IR
+
+      codegen::LLVMCodeGen codeGen(errorReporter);
+
+      if (codeGen.generateCode(ast)) {
+        std::cout << "Code generation successful. Output written to "
+                  << options.getOutputFilename() << std::endl;
+      } else {
+        std::cerr << "Code generation failed." << std::endl;
+        return 1;
+      }
+    }
     return 0;
 
   } catch (const std::exception &e) {
