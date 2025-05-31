@@ -10,6 +10,10 @@
 #include "parser/nodes/expression_nodes.h"
 #include "parser/nodes/statement_nodes.h"
 #include "parser/nodes/type_nodes.h"
+#include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/ExecutionEngine/GenericValue.h"
+#include "llvm/ExecutionEngine/MCJIT.h"
+#include "llvm/Support/TargetSelect.h"
 #include <memory>
 #include <stack>
 #include <string>
@@ -58,6 +62,7 @@ public:
    * @return Reference to the LLVM context
    */
   LLVMContext &getContext() { return context_; }
+  bool executeCode();
 
 private:
   // Type declaration prepass
@@ -120,6 +125,7 @@ private:
 
   // Core components
   core::ErrorReporter &errorReporter_;
+  CodeGenOptions options_;
   LLVMContext context_;
   LLVMTypeBuilder typeBuilder_;
   LLVMOptimizer optimizer_;

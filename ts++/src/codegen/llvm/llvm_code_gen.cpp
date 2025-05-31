@@ -2,6 +2,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
+#include <iostream>
 
 namespace codegen {
 
@@ -61,6 +62,53 @@ void LLVMCodeGen::optimize(OptimizationLevel level) {
 
 bool LLVMCodeGen::writeToFile(const std::string &filename) const {
   return context_.writeModuleToFile(filename);
+}
+
+bool LLVMCodeGen::executeCode() {
+  try {
+    // Initialize LLVM targets
+    llvm::InitializeNativeTarget();
+    llvm::InitializeNativeTargetAsmPrinter();
+    llvm::InitializeNativeTargetAsmParser();
+
+    // Create execution engine
+    std::string errorStr;
+    llvm::ExecutionEngine *executionEngine =
+        llvm::EngineBuilder()
+            .setErrorStr(&errorStr)
+            .create();
+
+    if (!executionEngine) {
+      error(core::SourceLocation(),
+            "Failed to create execution engine: " + errorStr);
+      return false;
+    }
+
+    // Find the main function
+    llvm::Function *mainFunc = executionEngine->FindFunctionNamed("main");
+    if (!mainFunc) {
+      error(core::SourceLocation(), "No main function found for execution");
+      return false;
+    }
+
+    // Prepare arguments (none for main in this case)
+    std::vector<llvm::GenericValue> args;
+
+    // Execute the function
+    llvm::GenericValue result = executionEngine->runFunction(mainFunc, args);
+
+    // Print the return value
+    std::cout << "Program executed, returned: " << result.IntVal.getSExtValue()
+              << std::endl;
+
+    // Clean up
+    delete executionEngine;
+    return true;
+  } catch (const std::exception &e) {
+    error(core::SourceLocation(),
+          std::string("Error during execution: ") + e.what());
+    return false;
+  }
 }
 
 void LLVMCodeGen::error(const core::SourceLocation &location,

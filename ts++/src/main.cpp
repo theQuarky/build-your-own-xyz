@@ -1,5 +1,5 @@
-#include "codegen/llvm/llvm_code_gen.h"
 #include "codegen/codegen_options.h"
+#include "codegen/llvm/llvm_code_gen.h"
 #include "core/diagnostics/error_reporter.h"
 #include "core/utils/file_utils.h"
 #include "core/utils/log_utils.h"
@@ -65,8 +65,14 @@ int main(int argc, char *argv[]) {
       codegen::LLVMCodeGen codeGen(errorReporter);
 
       if (codeGen.generateCode(ast)) {
-        std::cout << "Code generation successful. Output written to "
-                  << options.getOutputFilename() << std::endl;
+        // Need to pass the options filename to the code generator
+        if (codeGen.writeToFile(options.getOutputFilename())) {
+          std::cout << "Code generation successful. Output written to "
+                    << options.getOutputFilename() << std::endl;
+        } else {
+          std::cerr << "Failed to write output file." << std::endl;
+          return 1;
+        }
       } else {
         std::cerr << "Code generation failed." << std::endl;
         return 1;
