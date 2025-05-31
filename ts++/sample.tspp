@@ -1,233 +1,215 @@
-// This sample TSPP file demonstrates various language features, including interfaces, enums, and typedefs.
-#static let globalCounter: int = 100;
+let globalVar: int; // Top-level variable declaration
 
-// Enum declaration with underlying type
-enum Status : int {
-    PENDING = 0,
-    ACTIVE = 1,
-    COMPLETED = 2,
-    FAILED = 3
+namespace MyNamespace {
+    // --- 2. Memory Management and Types ---
+    #stack let stackVar: int = 10;
+    #heap let heapVar: float = 3.14;
+    #static let staticVar: bool = true;
+
+    let basicType: int;
+    let unionType: int | string;
+    let arrayType: float[];
+    let sizedArray: bool[4];
+    let rawPtr: int@;
+    let unsafePtr: int@unsafe;
+    let alignedPtr: float@aligned(16);
+    let refType: string&;
+    let sharedPtr: #shared<MyClass>;
+    let uniquePtr: #unique<AnotherClass> ;
+    let weakPtr: #weak<MyClass>;
+
+    let qualifiedNameVar: MyNamespace.InnerClass;
 }
 
-// Type alias using typedef
-typedef IntArray = int[];
-typedef StatusCallback = function(Status): void;
-
-// Interface declaration with method signatures
-interface Processor {
-    process(data: int): Status;
-    getStatus(): Status;
+// --- 3. Functions and Parameters ---
+#inline #unsafe #simd #target("x86")
+function complexFunction<T extends number, U>(
+    p1: int, 
+    const p2: string = "default", 
+    ref p3: T
+): float throws ErrorType where T: number {
+    // function body
+    return 0.0;
 }
 
-// Interface with generic parameter and constraints
-interface Container<T extends Comparable> {
-    add(item: T): void;
-    get(index: int): T;
-    size(): int;
+function simpleFunc(a: int): void {
+    // ...
 }
 
-// Interface with extended interfaces
-#zerocast interface AdvancedProcessor extends Processor {
-    reset(): void;
-    configure(options: int): Status;
+// --- 4. Classes and Interfaces ---
+#aligned(64) #packed #abstract
+class MyClass<T> extends BaseClass implements Interface1, Interface2 {
+    public field1: int;
+    private field2: #shared<string>;
+    protected field3: float = 1.0;
+
+    #inline
+    constructor(arg: int) {
+        this.field1 = arg;
+    }
+
+    #virtual
+    public method1(p: T): bool {
+        return true;
+    }
+
+    private method2(): void {
+        // ...
+    }
+
+    get myProp(): int { return this.field1; }
+    set myProp(value: int) { this.field1 = value; }
 }
 
-// Namespace containing multiple declarations
-namespace MathOps {
-    function subtract(a: int, b: int): int {
-        return a - b;
-    }
-    
-    function multiply(a: int, b: int): int {
-        return a * b;
-    }
-    
-    // Nested enum within namespace
-    enum Operation {
-        ADD,
-        SUBTRACT,
-        MULTIPLY,
-        DIVIDE
-    }
-    
-    // Function using the enum
-    function calculate(a: int, b: int, op: Operation): int {
-        if (op == Operation.ADD) {
-            return a + b;
-        } else if (op == Operation.SUBTRACT) {
-            return subtract(a, b);
-        } else if (op == Operation.MULTIPLY) {
-            return multiply(a, b);
-        } else if (op == Operation.DIVIDE) {
-            return a / b;
-        }
-        return 0;
-    }
+#zerocast
+interface Interface1<T> extends BaseInterface {
+    methodSignature(p1: T): int;
+    getProperty: string;
+    setProperty(value: string): void;
 }
 
-function increment(x: int): int {
-    return x + 1;
+class AnotherClass {}
+class BaseClass {}
+interface BaseInterface {}
+class ErrorType {}
+namespace MyNamespace { class InnerClass{} }
+
+// --- 5. Control Flow and Statements ---
+function controlFlowExample(n: int): void {
+    let x: int = n + 5; // Expression Statement
+
+    { // Block Statement
+        let y: int = 10;
+    }
+
+    if (x > 10) {
+        simpleFunc(x);
+    } else if (x < 0) {
+        simpleFunc(0);
+    } else {
+        simpleFunc(5);
+    }
+
+    switch (x % 3) {
+        case 0:
+            break;
+        case 1:
+        case 2:
+            simpleFunc(1);
+            break;
+        default:
+            simpleFunc(-1);
+    }
+
+    while (x > 0) {
+        x = x - 1;
+    }
+
+    do {
+        x = x + 1;
+    } while (x < 5);
+
+    for (let i: int = 0; i < 10; i = i + 1) {
+        simpleFunc(i);
+    }
+
+    let arr: int[] = [1, 2, 3];
+    for (const item of arr) {
+        simpleFunc(item);
+    }
+
+    try {
+        complexFunction<int, string>(1, "test", 5);
+    } catch (e: ErrorType) {
+        simpleFunc(0);
+    } finally {
+        simpleFunc(-1);
+    }
+
+    return x; // Jump Statement
+    break;    // Jump Statement
+    continue; // Jump Statement
+    throw new ErrorType(); // Jump Statement
+
+    #asm("mov eax, 1", "constraint1"); // Assembly Statement
 }
 
-function pointerExample(): int {
-    // Declare a pointer to int using the address-of operator.
-    let p: int@ = @globalCounter;
-    return *p + 10;
+// --- 6. Expressions ---
+function expressionExamples(): void {
+    let a: int = 10;
+    let b: int = 20;
+    let c: bool;
+
+    a = b;
+    a += 5;
+
+    c = (a > b) ? true : false; // Conditional
+
+    c = a > 5 && b < 30; // Logical AND
+    c = a < 0 || b > 0;  // Logical OR
+
+    a = b | 1;  // Bitwise OR
+    a = b ^ 2;  // Bitwise XOR
+    a = b & 3;  // Bitwise AND
+
+    c = a == b; // Equality
+    c = a != 15;
+
+    c = a < b;  // Relational
+    c = a >= 10;
+
+    a = b << 1; // Shift
+    a = b >> 2;
+
+    a = b + 5; // Additive
+    a = a - 3;
+
+    a = b * 2; // Multiplicative
+    a = b / 4;
+    a = b % 3;
+
+    a = -b;      // Unary prefix minus
+    c = !c;      // Unary prefix not
+    a = ++b;     // Unary prefix increment
+    a = b++;     // Unary postfix increment
+
+    let ptrVar: int@;
+    ptrVar = @a; // Address-of
+    b = *ptrVar; // Dereference
+    // let castVar = cast<float>a; // Cast - Note: Type parsing needed for full verification
+
+    let obj: MyClass<int>;
+    let memberVal = obj.field1; // Postfix member access (.)
+    let ptrObj: MyClass<int>@;
+    // memberVal = ptrObj@field1; // Postfix member access (@)
+
+    let arrLit: int[] = [1, 2, 3]; // Array Literal
+    let arrVal = arrLit[1];     // Postfix index access
+
+    simpleFunc(a);             // Postfix function call
+    // complexFunction<int, string>(a, "hello", b); // Postfix generic function call
+
+    let newObj = new MyClass<int>(42); // new Expression
+    
+    let thisVal = this; // this Expression (only valid inside class methods)
+
+    #const let compileTimeVal = 10 * 2; // CompileTimeExpr #const
+    #sizeof<int>; // CompileTimeExpr #sizeof
+    #alignof<MyClass<int>>; // CompileTimeExpr #alignof
+    #typeof(a); // CompileTimeExpr #typeof
+
+    let numLiteral = 123;
+    let hexLiteral = 0xFF;
+    let binLiteral = 0b101;
+    let floatLiteral = 1.23e4;
+    let strLiteral = "hello \"world\"";
+    let charLiteral = 'a';
+    let boolLiteral = true;
+    let nullLiteral = null;
+    let undefLiteral = undefined;
 }
 
-function identity<T>(value: T): T {
-    return value;
-}
-
-// Class implementing interfaces
-class TaskProcessor implements Processor, AdvancedProcessor {
-    private let currentStatus: Status;
-    private let options: int;
-    
-    constructor(initialStatus: Status) {
-        this.currentStatus = initialStatus;
-        this.options = 0;
-    }
-    
-    // Implementing Processor interface
-    public function process(data: int): Status {
-        if (data > 0) {
-            this.currentStatus = Status.ACTIVE;
-            return Status.ACTIVE;
-        } else {
-            this.currentStatus = Status.FAILED;
-            return Status.FAILED;
-        }
-    }
-    
-    public function getStatus(): Status {
-        return this.currentStatus;
-    }
-    
-    // Implementing AdvancedProcessor interface
-    public function reset(): void {
-        this.currentStatus = Status.PENDING;
-    }
-    
-    public function configure(options: int): Status {
-        this.options = options;
-        return Status.COMPLETED;
-    }
-}
-
-// Generic class implementing Container interface
-class ArrayContainer<T extends Comparable> implements Container<T> {
-    private let items: T[];
-    
-    constructor() {
-        this.items = [];
-    }
-    
-    public function add(item: T): void {
-        // Add item to array
-    }
-    
-    public function get_(index: int): T {
-        return this.items[index];
-    }
-    
-    public function size(): int {
-        return this.items.length;
-    }
-}
-
-class Calculator {
-    #packed let memory: int;
-    // Constructor declaration.
-    constructor(initial: int) {
-        this.memory = initial;
-    }
-    
-    // Inline method to add two integers.
-    #inline function add(a: int, b: int): int {
-        return a + b;
-    }
-    
-    // A method demonstrating control flow with a loop and conditional statements.
-    function compute(): int {
-        let total: int = 0;
-        // Standard for-loop (using ForStmt syntax).
-        for (let i = 0; i < 5; i++) {
-            total += i;
-        }
-        if (total > 10) {
-            total = this.add(total, 5);
-        } else {
-            total = this.add(total, -5);
-        }
-        return total;
-    }
-    
-    function updateMemory(newVal: int): void {
-        this.memory = newVal;
-    }
-}
-
-function printArray(arr: int[]): void {
-    // For-each loop to iterate over an array.
-    for (let num of arr) {
-        print("Array element: " + num);
-    }
-}
-
-// Function using typedef
-function processStatusArray(statuses: IntArray, callback: StatusCallback): void {
-    for (let s of statuses) {
-        let status = cast<Status>(s);
-        callback(status);
-    }
-}
-
-function main(): void {
-    let result1: int = increment(5);
-    let result2: int = pointerExample();
-    let value: int = identity<int>(42);
-    print("Increment result: " + result1);
-    print("Pointer example result: " + result2);
-    print("Identity function result: " + value);
-    
-    let calc: Calculator = new Calculator(10);
-    calc.updateMemory(20);
-    let computeResult: int = calc.compute();
-    print("Calculator compute result: " + computeResult);
-    
-    // Array literal usage.
-    let numbers: IntArray = [1, 2, 3, 4, 5];
-    printArray(numbers);
-    
-    // Using functions defined within a namespace.
-    let diff: int = MathOps.subtract(10, 3);
-    let prod: int = MathOps.multiply(4, 5);
-    print("Subtraction result: " + diff);
-    print("Multiplication result: " + prod);
-    
-    // Using namespace enum
-    let result: int = MathOps.calculate(5, 3, MathOps.Operation.MULTIPLY);
-    print("Calculation result: " + result);
-    
-    // Using interface and enum
-    let processor: TaskProcessor = new TaskProcessor(Status.PENDING);
-    let processStatus: Status = processor.process(42);
-    print("Process status: " + processStatus);
-    
-    // Reset the processor
-    processor.reset();
-    print("After reset, status: " + processor.getStatus());
-    
-    // Configure the processor
-    let configStatus: Status = processor.configure(100);
-    print("Configuration status: " + configStatus);
-    
-    // Using typedef with callback
-    let statusArray: IntArray = [0, 1, 2, 3];
-    processStatusArray(statusArray, function(status: Status): void {
-        print("Processing status: " + status);
-    });
-}
-
-main();
+// --- 7. Special Operators and Symbols ---
+// Assignment operators (=, +=, -=, *=, /=, %=, <<=, >>=, &=, ^=, |=) shown in Expressions
+// TypeList (Type, Type, ...) shown in function/class declarations
+// IDENTIFIER, NUMBER, STRING, CharacterLiteral shown in Literals

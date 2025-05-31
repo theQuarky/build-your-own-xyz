@@ -64,22 +64,39 @@ int main(int argc, char *argv[]) {
 
       codegen::LLVMCodeGen codeGen(errorReporter);
 
+      // if (codeGen.generateCode(ast)) {
+      //   // Need to pass the options filename to the code generator
+      //   if (codeGen.writeToFile(options.getOutputFilename())) {
+      //     std::cout << "Code generation successful. Output written to "
+      //               << options.getOutputFilename() << std::endl;
+      //   } else {
+      //     std::cerr << "Failed to write output file." << std::endl;
+      //     return 1;
+      //   }
+
+      //   std::cout << "Executing program..." << std::endl;
+      //   if (!codeGen.executeCode()) {
+      //     std::cerr << "Execution failed." << std::endl;
+      //     return 1;
+      //   }
       if (codeGen.generateCode(ast)) {
-        // Need to pass the options filename to the code generator
         if (codeGen.writeToFile(options.getOutputFilename())) {
           std::cout << "Code generation successful. Output written to "
                     << options.getOutputFilename() << std::endl;
+
+          // Disable execution for now to avoid crashes
+          // You can view the generated LLVM IR in the .ll file
         } else {
           std::cerr << "Failed to write output file." << std::endl;
           return 1;
         }
+
       } else {
         std::cerr << "Code generation failed." << std::endl;
         return 1;
       }
     }
     return 0;
-
   } catch (const std::exception &e) {
     std::cerr << "Fatal error: " << e.what() << "\n";
     return 1;
